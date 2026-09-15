@@ -244,7 +244,7 @@
 
     <!-- Volledige link naar Leaflet JS zodat de kaart werkt -->
     <script src="https://unpkg.com"></script>
-    <script>
+        <script>
         // --- WACHTWOORD LOGICA ---
         function checkPassword() {
             const input = document.getElementById('password-input').value;
@@ -276,7 +276,7 @@
                 L.control.zoom({ position: 'bottomright' }).addTo(map);
                 
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '© OpenStreetMap'
+                    attribution: '© OpenStreetMap contributors'
                 }).addTo(map);
 
                 map.on('click', function(e) {
@@ -315,7 +315,6 @@
             document.getElementById('status-text').innerText = "Data ophalen en berekenen...";
             getWeatherData(lat, lng);
         }
-
         function selectSpecies(species) {
             selectedSpecies = species;
             document.querySelectorAll('.btn-species').forEach(btn => {
@@ -369,7 +368,7 @@
                     hotspot = "Zoek de diepe gaten op, havens of de luwte achter peilers. Baars ligt nu passief tegen de bodem.";
                     tackle = "Gebruik een 'Carolina Rig' of een kleine shad (5-7cm). Vis extreem traag met lichte loodkop (3-5g).";
                 } else {
-                    hotspot = "Baars is actief! Zoek naar harde bodems, mosselbanken, bruggen and houten palen.";
+                    hotspot = "Baars is actief! Zoek naar harde bodems, mosselbanken, bruggen en houten palen.";
                     tackle = "Werp met kleine plugjes, spinners of 'crankbaits'. Felle kleuren bij bewolking, natuurlijke kleuren bij zon.";
                 }
             }
@@ -400,3 +399,4 @@
     </script>
 </body>
 </html>
+
