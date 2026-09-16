@@ -11,35 +11,33 @@
     <style>
         html, body { margin: 0; padding: 0; height: 100%; width: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f6fa; overflow: hidden; }
         
-        /* Login Scherm */
         #login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #1b2a47; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; color: white; padding: 20px; box-sizing: border-box; }
         .login-box { background: #2c3e50; padding: 30px 20px; border-radius: 12px; text-align: center; max-width: 320px; width: 100%; box-shadow: 0 4px 15px rgba(0,0,0,0.4); }
         .login-box input { width: 100%; padding: 12px; margin: 15px 0; border: none; border-radius: 6px; font-size: 16px; text-align: center; box-sizing: border-box; }
         .login-box button { background: #27ae60; color: white; border: none; padding: 12px 24px; font-size: 16px; font-weight: bold; border-radius: 6px; width: 100%; cursor: pointer; }
         #login-error { color: #e74c3c; font-size: 14px; margin-top: 10px; display: none; font-weight: bold; }
         
-        /* App Layout */
         .app-container { display: none; flex-direction: column; height: 100vh; }
         #control-panel { padding: 10px; background: #1b2a47; text-align: center; z-index: 1000; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
         
-        /* Categorie Knoppen */
         .category-buttons { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
         .btn-cat { flex: 1; min-width: 60px; padding: 8px 4px; font-size: 13px; font-weight: bold; border: 2px solid #2c3e50; border-radius: 6px; background: #2c3e50; color: #ecf0f1; cursor: pointer; }
         .btn-cat.active { background: #3498db; border-color: #2980b9; color: white; }
         
-        /* Subcategorie Knoppen */
         .species-buttons { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin-top: 8px; }
         .btn-species { background: #0f172a; border: 1px solid #3498db; color: #ecf0f1; padding: 8px 12px; font-size: 13px; font-weight: bold; border-radius: 6px; cursor: pointer; }
         .btn-species.active { background: #e67e22; border-color: #d35400; color: white; }
         
         #map { flex-grow: 1; width: 100%; z-index: 1; }
         
-        /* Dashboard Paneel */
-        #dashboard { padding: 15px; background: white; max-height: 50%; overflow-y: auto; border-top-left-radius: 16px; border-top-right-radius: 16px; z-index: 1000; box-shadow: 0 -4px 12px rgba(0,0,0,0.2); }
+        /* Legenda op de kaart */
+        .legend { background: white; padding: 8px 12px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.3); font-size: 12px; line-height: 18px; }
+        .legend i { width: 14px; height: 14px; float: left; margin-right: 8px; opacity: 0.8; border-radius: 3px; }
+
+        #dashboard { padding: 15px; background: white; max-height: 45%; overflow-y: auto; border-top-left-radius: 16px; border-top-right-radius: 16px; z-index: 1000; box-shadow: 0 -4px 12px rgba(0,0,0,0.2); }
         #dashboard h3 { margin: 0 0 10px 0; color: #1b2a47; font-size: 18px; display: flex; justify-content: space-between; align-items: center; }
         .btn-location { background: #27ae60; color: white; border: none; padding: 8px 14px; border-radius: 20px; font-size: 12px; font-weight: bold; cursor: pointer; }
         
-        /* Advies Blokken */
         .tip-box { background: #f8f9fa; padding: 12px; margin-top: 8px; border-left: 5px solid #3498db; border-radius: 6px; font-size: 14px; color: #2c3e50; }
         .tip-box.hotspot { border-left-color: #e67e22; background: #fff8f0; }
         .tip-box.tackle { border-left-color: #27ae60; background: #f0fff4; }
@@ -49,7 +47,6 @@
 </head>
 <body>
 
-    <!-- Login Scherm -->
     <div id="login-screen">
         <div class="login-box">
             <h2>🎣 SmartWater NL</h2>
@@ -60,10 +57,8 @@
         </div>
     </div>
 
-    <!-- Hoofd Applicatie -->
     <div class="app-container" id="main-app">
         <div id="control-panel">
-            <!-- Categorie Knoppen -->
             <div class="category-buttons">
                 <button class="btn-cat active" onclick="selectCategory('roofvis', this)">Roofvis 🐊</button>
                 <button class="btn-cat" onclick="selectCategory('witvis', this)">Witvis 🐟</button>
@@ -72,10 +67,7 @@
                 <button class="btn-cat" onclick="selectCategory('paling', this)">Paling 🐍</button>
             </div>
 
-            <!-- Subcategorieën (Vissoorten) -->
-            <div id="sub-species-panel" class="species-buttons">
-                <!-- Dynamisch gevuld via JS -->
-            </div>
+            <div id="sub-species-panel" class="species-buttons"></div>
         </div>
 
         <div id="map"></div>
@@ -86,7 +78,6 @@
                 <button class="btn-location" onclick="useCurrentLocation()">📍 Update GPS</button>
             </h3>
 
-            <!-- Direct Zichtbaar Advies -->
             <div id="advice-content">
                 <div class="tip-box hotspot">
                     <strong>🎯 Waar te vissen (Beste Hotspots):</strong> 
@@ -94,7 +85,7 @@
                 </div>
 
                 <div class="tip-box tackle">
-                    <strong>🪱 Hoe te vissen (Aas & Technique):</strong> 
+                    <strong>🪱 Hoe te vissen (Aas & Techniek):</strong> 
                     <span id="tackle-info">Data laden...</span>
                 </div>
 
@@ -119,109 +110,58 @@
         let selectedCategory = 'roofvis';
         let selectedFish = 'Snoek';
 
-        // Uitgebreide hengelsport datastructuur
+        // Voorbeeld GeoJSON waterkaart-data (Verenigingswater vs VISpaswater)
+        const waterData = {
+            "type": "FeatureCollection",
+            "features": [
+                {
+                    "type": "Feature",
+                    "properties": { "name": "Lek & Nederrijn", "type": "vispas", "hsv": "Landelijke Inbreng VISpas" },
+                    "geometry": { "type": "LineString", "coordinates": [[5.0, 51.95], [5.3, 51.96], [5.5, 51.96]] }
+                },
+                {
+                    "type": "Feature",
+                    "properties": { "name": "Kromme Rijn (Polderstreek)", "type": "vereniging", "hsv": "HSV De Utrechtse Hengelaars" },
+                    "geometry": { "type": "LineString", "coordinates": [[5.12, 52.08], [5.20, 52.05]] }
+                },
+                {
+                    "type": "Feature",
+                    "properties": { "name": "Stadsgracht & Polders", "type": "vereniging", "hsv": "HSV Het Visje Amsterdam/Utrecht" },
+                    "geometry": { "type": "Polygon", "coordinates": [[[5.10, 52.09], [5.12, 52.09], [5.12, 52.10], [5.10, 52.10], [5.10, 52.09]]] }
+                }
+            ]
+        };
+
         const fishData = {
             roofvis: {
                 sub: ['Snoek', 'Snoekbaars', 'Baars'],
                 advice: {
-                    'Snoek': { 
-                        min: "45 cm", 
-                        closed: "1 mrt t/m laatste za van april", 
-                        hs: "Zoek de overgang van diep naar ondiep water (taluds), rietkragen, lelievelden en bruggen. In de winter: diepere luwe havens.", 
-                        tc: "Vis met grote shads (15-20cm), jerkbaits of een takel met dode voorn. Vis langzaam vlak langs de dekking. ALTIJD stalen onderlijn!" 
-                    },
-                    'Snoekbaars': { 
-                        min: "42 cm", 
-                        closed: "1 mrt t/m laatste za van mei", 
-                        hs: "Zoek schaduwrijke of troebele plekken: onder grote bruggen, steile viaducten, diepe gaten (4-8m) en scheepvaartvaargeulen.", 
-                        tc: "Vis strak tegen de bodem aan met een shad (10-12cm) op een lichte loodkop, of gebruik een dropshot montage met een slanke softbait." 
-                    },
-                    'Baars': { 
-                        min: "22 cm", 
-                        closed: "1 apr t/m laatste za van mei", 
-                        hs: "Harde steenachtige bodems, mosselbanken, houten beschoeiingen, stijgers en rondom gemaaluitstromen.", 
-                        tc: "Gebruik de Carolina Rig of Ned Rig met een kreeft-imitatie. Kleine spinners en felle plugjes werken top bij actieve vis." 
-                    }
+                    'Snoek': { min: "45 cm", closed: "1 mrt t/m laatste za van april", hs: "Overgang diep/ondiep (taluds), rietkragen en lelievelden.", tc: "Grote shads (15-20cm), jerkbaits of takel met dode voorn." },
+                    'Snoekbaars': { min: "42 cm", closed: "1 mrt t/m laatste za van mei", hs: "Diepe gaten (4-8m), schaduw van bruggen, troebel of stromend water.", tc: "Shad met stinger strak over de bodem of dropshot." },
+                    'Baars': { min: "22 cm", closed: "1 apr t/m laatste za van mei", hs: "Harde steenachtige bodems, mosselbanken, steigers en damwanden.", tc: "Carolina Rig, kleine plugjes of shads (5-7cm)." }
                 }
             },
             witvis: {
                 sub: ['Voorn', 'Brasem', 'Blei', 'Zeelt', 'Winde'],
                 advice: {
-                    'Voorn': { 
-                        min: "15 cm (Ruisvoorn)", 
-                        closed: "Geen (Ruisvoorn: 1 apr - laatste za mei)", 
-                        hs: "Havens, luwe rietkommen, lichte stroming achter kribben en rondom woonboten.", 
-                        tc: "Lichte dobbermontage (0.5g - 1g) met een kleine haak (16-18). Aas: maden, casters of hennep. Regelmatig klein beetje voeren." 
-                    },
-                    'Brasem': { 
-                        min: "Geen", 
-                        closed: "Geen", 
-                        hs: "Brede kanalen, meren, diepe rustige kommen en zachte slibbige bodems.", 
-                        tc: "Gebruik een Feederhengel met een voerkorf. Aas: 2-3 pieren geknipt met maïs op een haak 10-12. Zwaar zoet voer gebruiken." 
-                    },
-                    'Blei': { 
-                        min: "Geen", 
-                        closed: "Geen", 
-                        hs: "Traag stromende kanalen, vaarten en cultuurwaters.", 
-                        tc: "Vaste hengel of lichte feeder. Aas: combinatie van een maden en een pinkie." 
-                    },
-                    'Zeelt': { 
-                        min: "Geen", 
-                        closed: "Geen", 
-                        hs: "Dichtbegroeide polderwateren, lelievelden, zachte bodems en onder overhangende bomen.", 
-                        tc: "Vis vroeg in de ochtend of avond. Dobbermontage strak tegen de lelies. Aas: blikmaïs, dauwwormen of zoete mini-boilies." 
-                    },
-                    'Winde': { 
-                        min: "30 cm", 
-                        closed: "1 apr t/m laatste za van mei", 
-                        hs: "Snelstromend water, stroomversnellingen, kribkoppen op de rivier en gemaaluitlaten.", 
-                        tc: "Drijvend vissen met een korst brood aan de oppervlakte, of vissen met kleine spintellers en vliegvisstreamers." 
-                    }
+                    'Voorn': { min: "15 cm (Ruisvoorn)", closed: "Geen", hs: "Havens, luwe rietkommen en lichte stroming.", tc: "Lichte dobbermontage met maden, casters of hennep." },
+                    'Brasem': { min: "Geen", closed: "Geen", hs: "Brede kanalen, meren en zachte slibbige bodems.", tc: "Feederhengel met voerkorf, maïs en pieren." },
+                    'Blei': { min: "Geen", closed: "Geen", hs: "Traag stromende kanalen en vaarten.", tc: "Vaste hengel of lichte feeder met maden." },
+                    'Zeelt': { min: "Geen", closed: "Geen", hs: "Dichtbegroeide polderwateren en lelievelden.", tc: "Dobbermontage strak tegen lelies met blikmaïs of dauwwormen." },
+                    'Winde': { min: "30 cm", closed: "1 apr t/m laatste za van mei", hs: "Snelstromend water en kribkoppen.", tc: "Drijvend brood, kleine spinners of vliegvisstreamers." }
                 }
             },
-            karper: {
-                sub: [],
-                advice: {
-                    'Karper': { 
-                        min: "Geen", 
-                        closed: "Geen", 
-                        hs: "Eilanden, rietkommen, lelievelden, luwe hoeken waar de wind op staat en onder overhangende takken.", 
-                        tc: "Vastloodmontage (Hair-rig) met boilies of tijgernoten. Bij warm weer: 's middags oppervlaktevissen met hondenbrokken of brood." 
-                    }
-                }
-            },
-            forel: {
-                sub: [],
-                advice: {
-                    'Forel': { 
-                        min: "25 cm (Beekforel)", 
-                        closed: "1 okt t/m 31 maart", 
-                        hs: "Zuurstofrijk, snelstromend en helder water. Zuurstofrijke inlopen en versmallingen.", 
-                        tc: "Actief vissen met micro-spoons, kleine spintellers of PowerBait deeg achter een Sbirolino dobber." 
-                    }
-                }
-            },
-            paling: {
-                sub: [],
-                advice: {
-                    'Paling': { 
-                        min: "ALTIJD TERUGZETTEN", 
-                        closed: "Algeheel meeneemverbod in NL", 
-                        hs: "Diepe holen, stenen beschoeiingen en 's nachts op heel ondiep water vlak langs de kant.", 
-                        tc: "Paling is beschermd en mag niet gericht op gevist worden. Bij vangst direct onbeschadigd in het water terugzetten!" 
-                    }
-                }
-            }
+            karper: { sub: [], advice: { 'Karper': { min: "Geen", closed: "Geen", hs: "Eilanden, rietkommen en luwe hoeken.", tc: "Vastloodmontage met boilies of tijgernoten." } } },
+            forel: { sub: [], advice: { 'Forel': { min: "25 cm", closed: "1 okt t/m 31 maart", hs: "Zuurstofrijk, snelstromend en helder water.", tc: "Micro-spoons of PowerBait deeg." } } },
+            paling: { sub: [], advice: { 'Paling': { min: "TERUGZETTEN", closed: "Algeheel verbod", hs: "Diepe holen en stenen beschoeiingen.", tc: "Direct onbeschadigd terugzetten!" } } }
         };
 
-        // DOM Load
         document.addEventListener("DOMContentLoaded", function() {
             document.getElementById('login-btn').addEventListener('click', checkPassword);
             document.getElementById('password-input').addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') checkPassword();
             });
 
-            // Start met Roofvis
             selectCategory('roofvis', document.querySelector('.btn-cat'));
         });
 
@@ -233,7 +173,7 @@
                 
                 setTimeout(() => {
                     initMap();
-                    useCurrentLocation(); // Meteen GPS proberen op te halen
+                    useCurrentLocation();
                 }, 100);
             } else {
                 document.getElementById('login-error').style.display = 'block';
@@ -242,29 +182,53 @@
 
         function initMap() {
             if (!map) {
-                map = L.map('map', { zoomControl: false }).setView([currentLat, currentLng], 8);
+                map = L.map('map', { zoomControl: false }).setView([currentLat, currentLng], 9);
                 L.control.zoom({ position: 'bottomright' }).addTo(map);
                 
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
-                    attribution: '© OpenStreetMap' 
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
+
+                // Waterlagen kleuren (GeoJSON)
+                L.geoJSON(waterData, {
+                    style: function(feature) {
+                        if (feature.properties.type === 'vispas') {
+                            return { color: '#0077b6', weight: 6, opacity: 0.8, fillColor: '#0096c7', fillOpacity: 0.5 }; // BLAUW: VISpas
+                        } else {
+                            return { color: '#e65100', weight: 6, opacity: 0.8, fillColor: '#f57c00', fillOpacity: 0.5 }; // ORANJE: Vereniging
+                        }
+                    },
+                    onEachFeature: function(feature, layer) {
+                        let statusText = feature.properties.type === 'vispas' 
+                            ? "<b style='color:#0077b6;'>🌊 Landelijk VISpas Water</b><br>Toegankelijk met de standaard VISpas."
+                            : `<b style='color:#e65100;'>🔒 Verenigingswater</b><br><b>Beheerder:</b> ${feature.properties.hsv}`;
+                        
+                        layer.bindPopup(`<b>${feature.properties.name}</b><br>${statusText}`);
+                    }
                 }).addTo(map);
 
-                map.on('click', function(e) { 
-                    handleLocationSelect(e.latlng.lat, e.latlng.lng); 
-                });
+                // Legenda toevoegen op de kaart
+                const legend = L.control({ position: 'topright' });
+                legend.onAdd = function () {
+                    const div = L.DomUtil.create('div', 'legend');
+                    div.innerHTML = `
+                        <div><i style="background: #0077b6;"></i> Landelijk VISpaswater</div>
+                        <div><i style="background: #e65100;"></i> Verenigingswater (HSV)</div>
+                    `;
+                    return div;
+                };
+                legend.addTo(map);
+
+                map.on('click', function(e) { handleLocationSelect(e.latlng.lat, e.latlng.lng); });
             }
             map.invalidateSize();
         }
 
         function selectCategory(category, btnElement) {
             selectedCategory = category;
-            
             document.querySelectorAll('.btn-cat').forEach(btn => btn.classList.remove('active'));
             if(btnElement) btnElement.classList.add('active');
 
             const subPanel = document.getElementById('sub-species-panel');
             subPanel.innerHTML = '';
-
             const speciesList = fishData[category].sub;
 
             if (speciesList.length > 0) {
@@ -279,8 +243,6 @@
             } else {
                 selectedFish = category.charAt(0).toUpperCase() + category.slice(1);
             }
-
-            // Direct het advies updaten op het scherm!
             updateAdviseUI();
         }
 
@@ -288,8 +250,6 @@
             selectedFish = fish;
             document.querySelectorAll('.btn-species').forEach(btn => btn.classList.remove('active'));
             if(btnElement) btnElement.classList.add('active');
-            
-            // Direct het advies updaten op het scherm!
             updateAdviseUI();
         }
 
@@ -299,9 +259,7 @@
                 navigator.geolocation.getCurrentPosition(function(pos) {
                     currentLat = pos.coords.latitude;
                     currentLng = pos.coords.longitude;
-                    
                     if(map) map.setView([currentLat, currentLng], 13);
-                    
                     handleLocationSelect(currentLat, currentLng);
                 }, function() { 
                     document.getElementById('weather-info').innerText = "GPS uit. Tik op de kaart voor weerdata.";
@@ -310,38 +268,24 @@
         }
 
         function handleLocationSelect(lat, lng) {
-            currentLat = lat; 
-            currentLng = lng;
-            
-            if (activeMarker) { 
-                activeMarker.setLatLng([lat, lng]); 
-            } else if(map) { 
-                activeMarker = L.marker([lat, lng]).addTo(map); 
-            }
-
+            currentLat = lat; currentLng = lng;
+            if (activeMarker) { activeMarker.setLatLng([lat, lng]); } 
+            else if(map) { activeMarker = L.marker([lat, lng]).addTo(map); }
             getWeatherData(lat, lng);
         }
 
-        // Toont direct de hotspot & hengelsport adviezen
         function updateAdviseUI() {
             document.getElementById('fish-title').innerText = `🎣 Direct Advies: ${selectedFish}`;
-
-            let adv = fishData[selectedCategory].advice[selectedFish] || { 
-                min: "Onbekend", closed: "Onbekend", hs: "Geen specifieke data.", tc: "Standaard montage." 
-            };
-
-            // Plaats meteen de hotspots en montages op het scherm
+            let adv = fishData[selectedCategory].advice[selectedFish] || { min: "Onbekend", closed: "Onbekend", hs: "Geen data.", tc: "Standaard montage." };
+            
             document.getElementById('hotspot-info').innerText = adv.hs;
             document.getElementById('tackle-info').innerText = adv.tc;
             document.getElementById('rules-info').innerHTML = `Min. maat: <u>${adv.min}</u> | Gesloten tijd: <u>${adv.closed}</u>`;
-
-            // Haal weerdata op voor huidige locatie
             getWeatherData(currentLat, currentLng);
         }
 
         function getWeatherData(lat, lng) {
             const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,wind_speed_10m`;
-
             fetch(url)
                 .then(res => res.json())
                 .then(data => {
@@ -349,9 +293,7 @@
                     let bft = Math.min(7, Math.floor(w.wind_speed_10m / 7));
                     document.getElementById('weather-info').innerText = `${w.temperature_2m}°C met windkracht ${bft} Bft (${Math.round(w.wind_speed_10m)} km/u).`;
                 })
-                .catch(() => { 
-                    document.getElementById('weather-info').innerText = "Weerdata niet beschikbaar."; 
-                });
+                .catch(() => { document.getElementById('weather-info').innerText = "Weerdata niet beschikbaar."; });
         }
     </script>
 </body>
