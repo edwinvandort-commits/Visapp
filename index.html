@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SmartWater NL - Roofvis App Pro</title>
+    <title>SmartWater NL - Visplanner Pro</title>
     
-    <!-- Leaflet CSS -->
+    <!-- Leaflet CSS voor de kaart -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
     <style>
@@ -20,10 +20,16 @@
         
         /* App Layout */
         .app-container { display: none; flex-direction: column; height: 100vh; }
-        #control-panel { padding: 12px; background: #2c3e50; text-align: center; z-index: 1000; }
-        .species-buttons { display: flex; gap: 8px; justify-content: center; }
-        .btn-species { flex: 1; max-width: 110px; padding: 12px 5px; font-size: 14px; font-weight: bold; border: 2px solid #34495e; border-radius: 8px; background: #34495e; color: #ecf0f1; cursor: pointer; }
-        .btn-species.active { background: #3498db; border-color: #2980b9; color: white; }
+        #control-panel { padding: 10px; background: #2c3e50; text-align: center; z-index: 1000; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        
+        /* Categorie & Vis Categorie Knoppen */
+        .category-buttons { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
+        .btn-cat { flex: 1; min-width: 60px; padding: 8px 4px; font-size: 13px; font-weight: bold; border: 2px solid #34495e; border-radius: 6px; background: #34495e; color: #ecf0f1; cursor: pointer; }
+        .btn-cat.active { background: #3498db; border-color: #2980b9; color: white; }
+        
+        .species-buttons { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin-top: 8px; }
+        .btn-species { background: #1a252f; border: 1px solid #3498db; color: #ecf0f1; padding: 6px 12px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer; }
+        .btn-species.active { background: #e67e22; border-color: #d35400; color: white; }
         
         #map { flex-grow: 1; width: 100%; z-index: 1; }
         
@@ -32,7 +38,9 @@
         #dashboard h3 { margin: 0 0 10px 0; color: #2c3e50; font-size: 18px; display: flex; justify-content: space-between; align-items: center; }
         .btn-location { background: #2ecc71; color: white; border: none; padding: 8px 14px; border-radius: 20px; font-size: 12px; font-weight: bold; cursor: pointer; }
         #status-text { color: #7f8c8d; font-style: italic; text-align: center; margin: 15px 0; }
-        .tip-box { background: #f8f9fa; padding: 12px; margin-top: 10px; border-left: 5px solid #3498db; border-radius: 6px; font-size: 14px; color: #333; }
+        
+        .tip-box { background: #f8f9fa; padding: 10px 12px; margin-top: 8px; border-left: 5px solid #3498db; border-radius: 6px; font-size: 13px; color: #333; }
+        .tip-box.rules { border-left-color: #e67e22; background: #fff8f0; }
         .tip-box strong { color: #2c3e50; display: block; margin-bottom: 3px; }
     </style>
 </head>
@@ -51,10 +59,18 @@
     <!-- Hoofd Applicatie -->
     <div class="app-container" id="main-app">
         <div id="control-panel">
-            <div class="species-buttons">
-                <button class="btn-species active" onclick="selectSpecies('baars', this)">Baars 🐟</button>
-                <button class="btn-species" onclick="selectSpecies('snoek', this)">Snoek 🐊</button>
-                <button class="btn-species" onclick="selectSpecies('snoekbaars', this)">Snoekbaars 🦇</button>
+            <!-- Categorie Knoppen -->
+            <div class="category-buttons">
+                <button class="btn-cat active" onclick="selectCategory('roofvis', this)">Roofvis 🐊</button>
+                <button class="btn-cat" onclick="selectCategory('witvis', this)">Witvis 🐟</button>
+                <button class="btn-cat" onclick="selectCategory('karper', this)">Karper 🐢</button>
+                <button class="btn-cat" onclick="selectCategory('forel', this)">Forel 🌈</button>
+                <button class="btn-cat" onclick="selectCategory('paling', this)">Paling 🐍</button>
+            </div>
+
+            <!-- Subcategorieën (Vissoorten) -->
+            <div id="sub-species-panel" class="species-buttons">
+                <!-- Dynamisch gevuld via JS -->
             </div>
         </div>
 
@@ -62,14 +78,27 @@
 
         <div id="dashboard">
             <h3>
-                <span>🎣 Live Advies</span>
+                <span>🎣 Live Advies & Regels</span>
                 <button class="btn-location" onclick="useCurrentLocation()">📍 Mijn Locatie</button>
             </h3>
             <p id="status-text">Tik op de kaart of gebruik 'Mijn Locatie'...</p>
             <div id="advice-content" style="display:none;">
-                <div class="tip-box"><strong>Weer lokaal:</strong> <span id="weather-info">-</span></div>
-                <div class="tip-box"><strong>Beste Hotspots Nu:</strong> <span id="hotspot-info">-</span></div>
-                <div class="tip-box"><strong>Materiaal & Aas:</strong> <span id="tackle-info">-</span></div>
+                <div class="tip-box rules">
+                    <strong>⚖️ Reglement & Wetgeving:</strong> 
+                    <span id="rules-info">-</span>
+                </div>
+                <div class="tip-box">
+                    <strong>🌤️ Weer lokaal:</strong> 
+                    <span id="weather-info">-</span>
+                </div>
+                <div class="tip-box">
+                    <strong>📍 Beste Hotspots Nu:</strong> 
+                    <span id="hotspot-info">-</span>
+                </div>
+                <div class="tip-box">
+                    <strong>🪱 Materiaal & Aas:</strong> 
+                    <span id="tackle-info">-</span>
+                </div>
             </div>
         </div>
     </div>
@@ -78,9 +107,106 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <script>
-        let map, currentLat, currentLng, activeMarker = null, selectedSpecies = 'baars';
+        let map, currentLat, currentLng, activeMarker = null;
+        let selectedCategory = 'roofvis';
+        let selectedFish = 'Snoek';
 
-        // Event listeners koppelen zodra de pagina geladen is
+        // Uitgebreide datastructuur inclusief Regels & Minimummaten
+        const fishData = {
+            roofvis: {
+                sub: ['Snoek', 'Snoekbaars', 'Baars'],
+                advice: {
+                    'Snoek': { 
+                        min: "45 cm", 
+                        closed: "1 maart t/m laatste zaterdag van april", 
+                        hs: "Overgang diep/ondiep (taluds), plantenbedden en rietkragen.", 
+                        tc: "Grote shads (15-20cm), jerkbaits of takel met dood aas. Stalen onderlijn verplicht!" 
+                    },
+                    'Snoekbaars': { 
+                        min: "42 cm", 
+                        closed: "1 maart t/m laatste zaterdag van mei", 
+                        hs: "Diepe gaten (4-8m), schaduw van bruggen, troebel of stromend water.", 
+                        tc: "Shad met stinger strak over de bodem gevist of dropshot montage." 
+                    },
+                    'Baars': { 
+                        min: "22 cm", 
+                        closed: "1 april t/m laatste zaterdag van mei", 
+                        hs: "Harde bodems, mosselbanken, steigers, damwanden en bruggen.", 
+                        tc: "Carolina rig, kleine plugjes of shads (5-7cm)." 
+                    }
+                }
+            },
+            witvis: {
+                sub: ['Voorn', 'Brasem', 'Blei', 'Zeelt', 'Winde'],
+                advice: {
+                    'Voorn': { 
+                        min: "15 cm (Ruisvoorn)", 
+                        closed: "Geen landelijke gesloten tijd (Let op: Ruisvoorn 1 apr - laatste za mei)", 
+                        hs: "Lichte stroming, havens, bruggen en rietkragen.", 
+                        tc: "Maden, casters of kleine hennep-korrels met lichte dobbermontage." 
+                    },
+                    'Brasem': { 
+                        min: "Geen minimummaat", 
+                        closed: "Geen gesloten tijd", 
+                        hs: "Diepe, rustige zones en zachte bodems/slib.", 
+                        tc: "Voerkorf (feeder) met zoet voer, maïs, pieren of mini-boilies." 
+                    },
+                    'Blei': { 
+                        min: "Geen minimummaat", 
+                        closed: "Geen gesloten tijd", 
+                        hs: "Traag stromend water, kanaalvakken en havens.", 
+                        tc: "Lichte feeder of vaste hengel met pinkies en maden." 
+                    },
+                    'Zeelt': { 
+                        min: "Geen minimummaat", 
+                        closed: "Geen gesloten tijd (terugzetadvies geldt lokaal)", 
+                        hs: "Dichtbegroeid water, lelievelden en zachte bodems.", 
+                        tc: "Vroege ochtend/avond met maïs, pieren of deeg vlak bij planten." 
+                    },
+                    'Winde': { 
+                        min: "30 cm", 
+                        closed: "1 april t/m laatste zaterdag van mei", 
+                        hs: "Snelstromend water, stroomversnellingen en kribben.", 
+                        tc: "Spinners, vliegvissen of drijvend brood aan het oppervlak." 
+                    }
+                }
+            },
+            karper: {
+                sub: [],
+                advice: {
+                    'Karper': { 
+                        min: "Geen minimummaat", 
+                        closed: "Geen gesloten tijd", 
+                        hs: "Eilanden, rietkragen, lelievelden en luwe hoeken van het water.", 
+                        tc: "Boilies, tijgernoten of pellet-rigs met een vastlood-systeem." 
+                    }
+                }
+            },
+            forel: {
+                sub: [],
+                advice: {
+                    'Forel': { 
+                        min: "25 cm (Beekforel)", 
+                        closed: "1 oktober t/m 31 maart (Beekforel)", 
+                        hs: "Stromend, zuurstofrijk en helder water.", 
+                        tc: "Powerbait deeg, kleine spintellers of micro-spoons." 
+                    }
+                }
+            },
+            paling: {
+                sub: [],
+                advice: {
+                    'Paling': { 
+                        min: "ALTIJD TERUGZETTEN (Meeneemverbod)", 
+                        closed: "N.v.t. - Paling heeft algehele beschermde status in NL", 
+                        hs: "Obstakels, diepe holen, beschoeiingen en 's nachts op ondieptes.", 
+                        tc: "Gevangen paling dient direct onbeschadigd te worden teruggezet." 
+                    }
+                }
+            }
+        };
+
+        // DOM Load handler
         document.addEventListener("DOMContentLoaded", function() {
             const loginBtn = document.getElementById('login-btn');
             const pwdInput = document.getElementById('password-input');
@@ -89,6 +215,9 @@
             pwdInput.addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') checkPassword();
             });
+
+            // Initialiseer categorie
+            selectCategory('roofvis', document.querySelector('.btn-cat'));
         });
 
         function checkPassword() {
@@ -97,7 +226,6 @@
                 document.getElementById('login-screen').style.display = 'none';
                 document.getElementById('main-app').style.display = 'flex';
                 
-                // Kort wachten tot het scherm zichtbaar is voordat de kaart wordt getekend
                 setTimeout(initMap, 100);
             } else {
                 document.getElementById('login-error').style.display = 'block';
@@ -107,7 +235,6 @@
         function initMap() {
             if (!map) {
                 map = L.map('map', { zoomControl: false }).setView([52.0907, 5.1214], 8);
-                
                 L.control.zoom({ position: 'bottomright' }).addTo(map);
                 
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
@@ -118,8 +245,42 @@
                     handleLocationSelect(e.latlng.lat, e.latlng.lng); 
                 });
             }
-            // Zorg dat Leaflet de juiste schermgrootte pakt
             map.invalidateSize();
+        }
+
+        function selectCategory(category, btnElement) {
+            selectedCategory = category;
+            
+            document.querySelectorAll('.btn-cat').forEach(btn => btn.classList.remove('active'));
+            if(btnElement) btnElement.classList.add('active');
+
+            const subPanel = document.getElementById('sub-species-panel');
+            subPanel.innerHTML = '';
+
+            const speciesList = fishData[category].sub;
+
+            if (speciesList.length > 0) {
+                speciesList.forEach((fish, index) => {
+                    const btn = document.createElement('button');
+                    btn.className = `btn-species ${index === 0 ? 'active' : ''}`;
+                    btn.innerText = fish;
+                    btn.onclick = () => selectSubSpecies(fish, btn);
+                    subPanel.appendChild(btn);
+                });
+                selectedFish = speciesList[0];
+            } else {
+                selectedFish = category.charAt(0).toUpperCase() + category.slice(1);
+            }
+
+            if (currentLat && currentLng) handleLocationSelect(currentLat, currentLng);
+        }
+
+        function selectSubSpecies(fish, btnElement) {
+            selectedFish = fish;
+            document.querySelectorAll('.btn-species').forEach(btn => btn.classList.remove('active'));
+            if(btnElement) btnElement.classList.add('active');
+            
+            if (currentLat && currentLng) handleLocationSelect(currentLat, currentLng);
         }
 
         function useCurrentLocation() {
@@ -152,16 +313,6 @@
             getWeatherData(lat, lng);
         }
 
-        function selectSpecies(species, btnElement) {
-            selectedSpecies = species;
-            document.querySelectorAll('.btn-species').forEach(btn => btn.classList.remove('active'));
-            if(btnElement) btnElement.classList.add('active');
-            
-            if (currentLat && currentLng) { 
-                handleLocationSelect(currentLat, currentLng); 
-            }
-        }
-
         function getWeatherData(lat, lng) {
             const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,wind_speed_10m`;
 
@@ -171,28 +322,23 @@
                     let w = data.current;
                     let bft = Math.min(7, Math.floor(w.wind_speed_10m / 7));
                     let txt = `${w.temperature_2m}°C met windkracht ${bft} Bft (${Math.round(w.wind_speed_10m)} km/u).`;
-                    let hs = "", tc = "";
 
-                    if (selectedSpecies === "baars") {
-                        hs = w.temperature_2m < 10 ? "Diepe gaten, havens of luwte achter peilers. Ligt passief tegen de bodem." : "Actief! Harde bodems, mosselbanken, bruggen en houten palen.";
-                        tc = w.temperature_2m < 10 ? "Carolina Rig of kleine shad (5-7cm). Extreem traag vissen met lichte loodkop (3-5g)." : "Kleine plugjes, spinners of crankbaits. Felle kleuren bij bewolking.";
-                    } else if (selectedSpecies === "snoek") {
-                        hs = w.temperature_2m > 20 ? "Warm water. In de buurt van plantenbedden of in stromend, zuurstofrijk water." : "Ideaal! Richt je op de overgang van diep naar ondiep water (taluds) en rietkragen.";
-                        tc = w.temperature_2m > 20 ? "Niet te diep vissen. Grote spinners of chatterbaits die veel trillingen maken werken top." : "Grote shads (15-20cm) of jerkbaits. Gebruik altijd een stalen onderlijn!";
-                    } else {
-                        hs = "Snoekbaars haat licht. Zoek diep water op (4-8m), troebel water, of schaduw onder grote bruggen.";
-                        tc = w.temperature_2m < 12 ? "Dropshot montage met slanke worm-achtige softbait. Beweeg bijna niet." : "Stinger montage op een shad van 10-12cm. Vis strak tegen de bodem aan.";
-                    }
+                    let adv = fishData[selectedCategory].advice[selectedFish] || { 
+                        min: "Onbekend", closed: "Onbekend", hs: "Geen specifieke data.", tc: "Standaard montage." 
+                    };
 
                     document.getElementById('status-text').style.display = 'none';
                     document.getElementById('advice-content').style.display = 'block';
+                    
+                    // Vul informatie in
+                    document.getElementById('rules-info').innerHTML = `<strong>${selectedFish}</strong> — Min. maat: <u>${adv.min}</u> | Gesloten tijd: <u>${adv.closed}</u>`;
                     document.getElementById('weather-info').innerText = txt;
-                    document.getElementById('hotspot-info').innerText = hs;
-                    document.getElementById('tackle-info').innerText = tc;
+                    document.getElementById('hotspot-info').innerText = adv.hs;
+                    document.getElementById('tackle-info').innerText = adv.tc;
                 })
                 .catch(err => { 
                     console.error(err);
-                    document.getElementById('status-text').innerText = "Fout bij ophalen van weerdata."; 
+                    document.getElementById('status-text').innerText = "Fout bij ophalen van data."; 
                 });
         }
     </script>
