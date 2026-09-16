@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SmartWater NL - Live Visplanner</title>
+    <title>SmartWater NL - Live Visplanner & Hotspots</title>
     
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -30,7 +30,6 @@
         
         #map { flex-grow: 1; width: 100%; z-index: 1; }
         
-        /* Legenda op de kaart */
         .legend { background: white; padding: 8px 12px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.3); font-size: 12px; line-height: 18px; }
         .legend i { width: 14px; height: 14px; float: left; margin-right: 8px; opacity: 0.8; border-radius: 3px; }
 
@@ -75,60 +74,79 @@
         <div id="dashboard">
             <h3>
                 <span id="fish-title">🎣 Direct Advies: Snoek</span>
-                <button class="btn-location" onclick="useCurrentLocation()">📍 Update GPS</button>
+                <button class="btn-location" onclick="useCurrentLocation()">📍 Mijn Locatie</button>
             </h3>
 
             <div id="advice-content">
                 <div class="tip-box hotspot">
-                    <strong>🎯 Waar te vissen (Beste Hotspots):</strong> 
-                    <span id="hotspot-info">Data laden...</span>
+                    <strong>🎯 Waar te vissen (Hotspots voor deze vis):</strong> 
+                    <span id="hotspot-info">Kies een vissoort...</span>
                 </div>
 
                 <div class="tip-box tackle">
-                    <strong>🪱 Hoe te vissen (Aas & Techniek):</strong> 
-                    <span id="tackle-info">Data laden...</span>
+                    <strong>🪱 Beste Aas & Techniek:</strong> 
+                    <span id="tackle-info">Kies een vissoort...</span>
                 </div>
 
                 <div class="tip-box">
-                    <strong>🌤️ Weer & Omstandigheden:</strong> 
+                    <strong>🌤️ Lokaal Weer:</strong> 
                     <span id="weather-info">Locatie ophalen...</span>
                 </div>
 
                 <div class="tip-box rules">
-                    <strong>⚖️ Reglement & Wetgeving:</strong> 
+                    <strong>⚖️ Reglement & Minimummaat:</strong> 
                     <span id="rules-info">-</span>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <script>
-        let map, currentLat = 52.0907, currentLng = 5.1214, activeMarker = null;
+        let map, currentLat = 52.0907, currentLng = 5.1214, userMarker = null;
+        let hotspotMarkers = [];
         let selectedCategory = 'roofvis';
         let selectedFish = 'Snoek';
 
-        // Voorbeeld GeoJSON waterkaart-data (Verenigingswater vs VISpaswater)
+        // Waterkaart indeling (Landelijke VISpas vs HSV)
         const waterData = {
             "type": "FeatureCollection",
             "features": [
                 {
                     "type": "Feature",
                     "properties": { "name": "Lek & Nederrijn", "type": "vispas", "hsv": "Landelijke Inbreng VISpas" },
-                    "geometry": { "type": "LineString", "coordinates": [[5.0, 51.95], [5.3, 51.96], [5.5, 51.96]] }
+                    "geometry": { "type": "LineString", "coordinates": [[5.0, 51.95], [5.12, 51.96], [5.25, 51.96]] }
                 },
                 {
                     "type": "Feature",
-                    "properties": { "name": "Kromme Rijn (Polderstreek)", "type": "vereniging", "hsv": "HSV De Utrechtse Hengelaars" },
-                    "geometry": { "type": "LineString", "coordinates": [[5.12, 52.08], [5.20, 52.05]] }
-                },
-                {
-                    "type": "Feature",
-                    "properties": { "name": "Stadsgracht & Polders", "type": "vereniging", "hsv": "HSV Het Visje Amsterdam/Utrecht" },
-                    "geometry": { "type": "Polygon", "coordinates": [[[5.10, 52.09], [5.12, 52.09], [5.12, 52.10], [5.10, 52.10], [5.10, 52.09]]] }
+                    "properties": { "name": "Stadsgrachten & Polders", "type": "vereniging", "hsv": "HSV Utrecht / Regionale HSV" },
+                    "geometry": { "type": "LineString", "coordinates": [[5.10, 52.08], [5.15, 52.09]] }
                 }
+            ]
+        };
+
+        // Hotspots per vissoort op specifieke GPS-coördinaten
+        const hotspotLocations = {
+            'Snoek': [
+                { lat: 52.092, lng: 5.118, title: "Rietkraag & Inham", desc: "Snoek ligt hier vaak op de loer in het ondiepe riet." },
+                { lat: 52.085, lng: 5.130, title: "Brugpijlers & Schaduw", desc: "Mooie doorgang waar snoek jaagt op witvis." }
+            ],
+            'Snoekbaars': [
+                { lat: 51.960, lng: 5.120, title: "Talud Kribkop Rivier", desc: "Diepe stroomnaad met harde steenachtige bodem." },
+                { lat: 52.090, lng: 5.110, title: "Schaduwzijde Viaduct", desc: "Donkere stek met veel diepteverschil." }
+            ],
+            'Baars': [
+                { lat: 52.088, lng: 5.122, title: "Houten Damwand & Steiger", desc: "Baarzen scholen hier graag samen rondom de palen." }
+            ],
+            'Voorn': [
+                { lat: 52.095, lng: 5.115, title: "Luwe Havenmond", desc: "Rustig water met veel beschutting tegen stroming." }
+            ],
+            'Brasem': [
+                { lat: 51.955, lng: 5.150, title: "Zachte Slibkom Kanaal", desc: "Diepere kuil waar scholen brasem aas zoeken op de bodem." }
+            ],
+            'Karper': [
+                { lat: 52.083, lng: 5.125, title: "Lelieveld & Eilandje", desc: "Populaire route voor karpers op zoek naar voedsel." }
             ]
         };
 
@@ -136,22 +154,22 @@
             roofvis: {
                 sub: ['Snoek', 'Snoekbaars', 'Baars'],
                 advice: {
-                    'Snoek': { min: "45 cm", closed: "1 mrt t/m laatste za van april", hs: "Overgang diep/ondiep (taluds), rietkragen en lelievelden.", tc: "Grote shads (15-20cm), jerkbaits of takel met dode voorn." },
-                    'Snoekbaars': { min: "42 cm", closed: "1 mrt t/m laatste za van mei", hs: "Diepe gaten (4-8m), schaduw van bruggen, troebel of stromend water.", tc: "Shad met stinger strak over de bodem of dropshot." },
-                    'Baars': { min: "22 cm", closed: "1 apr t/m laatste za van mei", hs: "Harde steenachtige bodems, mosselbanken, steigers en damwanden.", tc: "Carolina Rig, kleine plugjes of shads (5-7cm)." }
+                    'Snoek': { min: "45 cm", closed: "1 mrt t/m laatste za april", hs: "Overgang van diep naar ondiep water, rietkragen, waterplanten en brugpijlers.", tc: "Grote shads (15-20cm), jerkbaits of takel met dode voorn. Altijd een stalen onderlijn gebruiken!" },
+                    'Snoekbaars': { min: "42 cm", closed: "1 mrt t/m laatste za mei", hs: "Diepe gaten (4-8 meter), troebel of stromend water en schaduwrijke bruggen.", tc: "Shad op lichte loodkop strak over de bodem tikken of dropshotten." },
+                    'Baars': { min: "22 cm", closed: "1 apr t/m laatste za mei", hs: "Harde steenachtige bodems, mosselbanken, steigers en damwanden.", tc: "Carolina Rig met kreeft-imitatie, kleine plugjes of 5cm shads." }
                 }
             },
             witvis: {
                 sub: ['Voorn', 'Brasem', 'Blei', 'Zeelt', 'Winde'],
                 advice: {
-                    'Voorn': { min: "15 cm (Ruisvoorn)", closed: "Geen", hs: "Havens, luwe rietkommen en lichte stroming.", tc: "Lichte dobbermontage met maden, casters of hennep." },
+                    'Voorn': { min: "15 cm (Ruisvoorn)", closed: "Geen", hs: "Havens, luwe rietkommen en lichte stroming achter kribben.", tc: "Lichte dobber (0.5g-1g) met maden, casters of hennep." },
                     'Brasem': { min: "Geen", closed: "Geen", hs: "Brede kanalen, meren en zachte slibbige bodems.", tc: "Feederhengel met voerkorf, maïs en pieren." },
-                    'Blei': { min: "Geen", closed: "Geen", hs: "Traag stromende kanalen en vaarten.", tc: "Vaste hengel of lichte feeder met maden." },
+                    'Blei': { min: "Geen", closed: "Geen", hs: "Traag stromende kanalen en vaarten.", tc: "Lichte feeder of vaste hengel met maden." },
                     'Zeelt': { min: "Geen", closed: "Geen", hs: "Dichtbegroeide polderwateren en lelievelden.", tc: "Dobbermontage strak tegen lelies met blikmaïs of dauwwormen." },
-                    'Winde': { min: "30 cm", closed: "1 apr t/m laatste za van mei", hs: "Snelstromend water en kribkoppen.", tc: "Drijvend brood, kleine spinners of vliegvisstreamers." }
+                    'Winde': { min: "30 cm", closed: "1 apr t/m laatste za mei", hs: "Snelstromend water en kribkoppen.", tc: "Drijvend brood, kleine spinners of streamers." }
                 }
             },
-            karper: { sub: [], advice: { 'Karper': { min: "Geen", closed: "Geen", hs: "Eilanden, rietkommen en luwe hoeken.", tc: "Vastloodmontage met boilies of tijgernoten." } } },
+            karper: { sub: [], advice: { 'Karper': { min: "Geen", closed: "Geen", hs: "Eilanden, rietkommen en luwe hoeken waar de wind op staat.", tc: "Vastloodmontage met boilies of tijgernoten." } } },
             forel: { sub: [], advice: { 'Forel': { min: "25 cm", closed: "1 okt t/m 31 maart", hs: "Zuurstofrijk, snelstromend en helder water.", tc: "Micro-spoons of PowerBait deeg." } } },
             paling: { sub: [], advice: { 'Paling': { min: "TERUGZETTEN", closed: "Algeheel verbod", hs: "Diepe holen en stenen beschoeiingen.", tc: "Direct onbeschadigd terugzetten!" } } }
         };
@@ -182,44 +200,64 @@
 
         function initMap() {
             if (!map) {
-                map = L.map('map', { zoomControl: false }).setView([currentLat, currentLng], 9);
+                map = L.map('map', { zoomControl: false }).setView([currentLat, currentLng], 12);
                 L.control.zoom({ position: 'bottomright' }).addTo(map);
                 
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
 
-                // Waterlagen kleuren (GeoJSON)
+                // Waterkaarten kleuren (VISpas vs HSV)
                 L.geoJSON(waterData, {
                     style: function(feature) {
-                        if (feature.properties.type === 'vispas') {
-                            return { color: '#0077b6', weight: 6, opacity: 0.8, fillColor: '#0096c7', fillOpacity: 0.5 }; // BLAUW: VISpas
-                        } else {
-                            return { color: '#e65100', weight: 6, opacity: 0.8, fillColor: '#f57c00', fillOpacity: 0.5 }; // ORANJE: Vereniging
-                        }
+                        return feature.properties.type === 'vispas' 
+                            ? { color: '#0077b6', weight: 6, opacity: 0.8 } 
+                            : { color: '#e65100', weight: 6, opacity: 0.8 };
                     },
                     onEachFeature: function(feature, layer) {
-                        let statusText = feature.properties.type === 'vispas' 
-                            ? "<b style='color:#0077b6;'>🌊 Landelijk VISpas Water</b><br>Toegankelijk met de standaard VISpas."
-                            : `<b style='color:#e65100;'>🔒 Verenigingswater</b><br><b>Beheerder:</b> ${feature.properties.hsv}`;
-                        
-                        layer.bindPopup(`<b>${feature.properties.name}</b><br>${statusText}`);
+                        let text = feature.properties.type === 'vispas' 
+                            ? "<b style='color:#0077b6;'>🌊 Landelijk VISpas Water</b>" 
+                            : `<b style='color:#e65100;'>🔒 Verenigingswater</b><br>HSV: ${feature.properties.hsv}`;
+                        layer.bindPopup(`<b>${feature.properties.name}</b><br>${text}`);
                     }
                 }).addTo(map);
 
-                // Legenda toevoegen op de kaart
+                // Legenda
                 const legend = L.control({ position: 'topright' });
                 legend.onAdd = function () {
                     const div = L.DomUtil.create('div', 'legend');
                     div.innerHTML = `
-                        <div><i style="background: #0077b6;"></i> Landelijk VISpaswater</div>
-                        <div><i style="background: #e65100;"></i> Verenigingswater (HSV)</div>
+                        <div><i style="background: #0077b6;"></i> VISpaswater</div>
+                        <div><i style="background: #e65100;"></i> Verenigingswater</div>
                     `;
                     return div;
                 };
                 legend.addTo(map);
 
-                map.on('click', function(e) { handleLocationSelect(e.latlng.lat, e.latlng.lng); });
+                map.on('click', function(e) { 
+                    currentLat = e.latlng.lat; 
+                    currentLng = e.latlng.lng;
+                    if(userMarker) userMarker.setLatLng([currentLat, currentLng]);
+                    getWeatherData(currentLat, currentLng);
+                });
             }
             map.invalidateSize();
+            renderHotspotsOnMap();
+        }
+
+        // Toon de specifieke Hotspots als spelden op de kaart
+        function renderHotspotsOnMap() {
+            if (!map) return;
+
+            // Verwijder oude markers
+            hotspotMarkers.forEach(marker => map.removeLayer(marker));
+            hotspotMarkers = [];
+
+            let spots = hotspotLocations[selectedFish] || [];
+
+            spots.forEach(spot => {
+                let marker = L.marker([spot.lat, spot.lng]).addTo(map);
+                marker.bindPopup(`<b>🎯 Hotspot: ${selectedFish}</b><br><b>${spot.title}</b><br>${spot.desc}`);
+                hotspotMarkers.push(marker);
+            });
         }
 
         function selectCategory(category, btnElement) {
@@ -259,28 +297,30 @@
                 navigator.geolocation.getCurrentPosition(function(pos) {
                     currentLat = pos.coords.latitude;
                     currentLng = pos.coords.longitude;
+                    
                     if(map) map.setView([currentLat, currentLng], 13);
-                    handleLocationSelect(currentLat, currentLng);
+                    
+                    if (userMarker) {
+                        userMarker.setLatLng([currentLat, currentLng]);
+                    } else if(map) {
+                        userMarker = L.marker([currentLat, currentLng]).addTo(map).bindPopup("📍 Jouw Locatie").openPopup();
+                    }
+                    getWeatherData(currentLat, currentLng);
                 }, function() { 
                     document.getElementById('weather-info').innerText = "GPS uit. Tik op de kaart voor weerdata.";
                 });
             }
         }
 
-        function handleLocationSelect(lat, lng) {
-            currentLat = lat; currentLng = lng;
-            if (activeMarker) { activeMarker.setLatLng([lat, lng]); } 
-            else if(map) { activeMarker = L.marker([lat, lng]).addTo(map); }
-            getWeatherData(lat, lng);
-        }
-
         function updateAdviseUI() {
             document.getElementById('fish-title').innerText = `🎣 Direct Advies: ${selectedFish}`;
-            let adv = fishData[selectedCategory].advice[selectedFish] || { min: "Onbekend", closed: "Onbekend", hs: "Geen data.", tc: "Standaard montage." };
+            let adv = fishData[selectedCategory].advice[selectedFish] || { min: "Onbekend", closed: "Onbekend", hs: "Geen specifieke data.", tc: "Standaard montage." };
             
             document.getElementById('hotspot-info').innerText = adv.hs;
             document.getElementById('tackle-info').innerText = adv.tc;
             document.getElementById('rules-info').innerHTML = `Min. maat: <u>${adv.min}</u> | Gesloten tijd: <u>${adv.closed}</u>`;
+            
+            renderHotspotsOnMap();
             getWeatherData(currentLat, currentLng);
         }
 
