@@ -1,4 +1,3 @@
-HTML
 <!DOCTYPE html>
 <html lang="nl">
 <head>
@@ -6,7 +5,7 @@ HTML
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>SmartWater NL - Roofvis App Pro</title>
     
-    <!-- Gecorrigeerde Leaflet CSS -->
+    <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
     <style>
@@ -16,8 +15,7 @@ HTML
         #login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #2c3e50; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; color: white; padding: 20px; box-sizing: border-box; }
         .login-box { background: #34495e; padding: 30px 20px; border-radius: 12px; text-align: center; max-width: 320px; width: 100%; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
         .login-box input { width: 100%; padding: 12px; margin: 15px 0; border: none; border-radius: 6px; font-size: 16px; text-align: center; box-sizing: border-box; }
-        .login-box button { background: #3498db; color: white; border: none; padding: 12px 24px; font-size: 16px; font-weight: bold; border-radius: 6px; width: 100%; cursor: pointer; transition: background 0.2s; }
-        .login-box button:hover { background: #2980b9; }
+        .login-box button { background: #3498db; color: white; border: none; padding: 12px 24px; font-size: 16px; font-weight: bold; border-radius: 6px; width: 100%; cursor: pointer; }
         #login-error { color: #e74c3c; font-size: 14px; margin-top: 10px; display: none; font-weight: bold; }
         
         /* App Layout */
@@ -44,8 +42,8 @@ HTML
     <div id="login-screen">
         <div class="login-box">
             <h2>🔒 SmartWater NL</h2>
-            <input type="password" id="password-input" placeholder="Wachtwoord..." onkeyup="if(event.key==='Enter') checkPassword()">
-            <button onclick="checkPassword()">Inloggen</button>
+            <input type="password" id="password-input" placeholder="Wachtwoord...">
+            <button id="login-btn">Inloggen</button>
             <p id="login-error">Onjuist wachtwoord.</p>
         </div>
     </div>
@@ -76,18 +74,31 @@ HTML
         </div>
     </div>
 
-    <!-- Gecorrigeerde Leaflet JS Script -->
+    <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <script>
         let map, currentLat, currentLng, activeMarker = null, selectedSpecies = 'baars';
+
+        // Event listeners koppelen zodra de pagina geladen is
+        document.addEventListener("DOMContentLoaded", function() {
+            const loginBtn = document.getElementById('login-btn');
+            const pwdInput = document.getElementById('password-input');
+
+            loginBtn.addEventListener('click', checkPassword);
+            pwdInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') checkPassword();
+            });
+        });
 
         function checkPassword() {
             const input = document.getElementById('password-input').value;
             if (input === "roofvis2026") {
                 document.getElementById('login-screen').style.display = 'none';
                 document.getElementById('main-app').style.display = 'flex';
-                initMap();
+                
+                // Kort wachten tot het scherm zichtbaar is voordat de kaart wordt getekend
+                setTimeout(initMap, 100);
             } else {
                 document.getElementById('login-error').style.display = 'block';
             }
@@ -95,8 +106,8 @@ HTML
 
         function initMap() {
             if (!map) {
-                // Standaard gecentreerd op Nederland
                 map = L.map('map', { zoomControl: false }).setView([52.0907, 5.1214], 8);
+                
                 L.control.zoom({ position: 'bottomright' }).addTo(map);
                 
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
@@ -107,6 +118,8 @@ HTML
                     handleLocationSelect(e.latlng.lat, e.latlng.lng); 
                 });
             }
+            // Zorg dat Leaflet de juiste schermgrootte pakt
+            map.invalidateSize();
         }
 
         function useCurrentLocation() {
@@ -150,7 +163,6 @@ HTML
         }
 
         function getWeatherData(lat, lng) {
-            // Gecorrigeerde Open-Meteo API URL
             const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,wind_speed_10m`;
 
             fetch(url)
