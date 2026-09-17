@@ -159,8 +159,6 @@
         .tip-box.hotspot { border-left-color: #e67e22; }
         .tip-box.tackle { border-left-color: #27ae60; }
         .tip-box.rules { border-left-color: #e74c3c; }
-        
-        .visplanner-btn { display: inline-block; margin-top: 6px; background: #27ae60; color: white; text-decoration: none; padding: 6px 12px; border-radius: 4px; font-weight: bold; font-size: 12px; }
 
         .scan-container { text-align: center; padding: 10px; }
         .scan-preview { width: 100%; max-height: 200px; object-fit: contain; border-radius: 8px; margin-top: 10px; display: none; border: 2px dashed #3498db; }
@@ -223,9 +221,8 @@
                 </h3>
 
                 <div class="tip-box water-status">
-                    <strong>🌊 Visrecht & Locatie:</strong><br>
-                    <span id="water-info">Tik op een water op de kaart...</span><br>
-                    <a id="visplanner-link" href="https://www.visplanner.nl" target="_blank" class="visplanner-btn">📲 Open in Visplanner.nl</a>
+                    <strong>🌊 Visrecht & Wateranalyse:</strong><br>
+                    <span id="water-info">Tik op een water op de kaart om visrechten te analyseren...</span>
                 </div>
 
                 <div class="tip-box depth-advice">
@@ -296,7 +293,6 @@
         let currentLng = 5.2913;
         let userMarker = null;
 
-        // Uitgebreide Database met Advies per Vissoort
         const speciesData = {
             roofvis: [
                 { name: "Snoek", depth: "0.5 - 2.5 meter", distance: "3 - 15 meter (bij oever/planten)", hotspot: "Rietkragen, bruggen, lelievelden en steigers.", tackle: "Shads (12-20cm), jerkbaits, spinnerbaits of dode voorn.", min: "45 cm", closed: "1 mrt t/m laatste za april" },
@@ -359,9 +355,8 @@
                     attribution: 'Tiles &copy; Esri'
                 });
 
-                // Waterdieptes & Bodemstructuur via OpenSeaMap
                 const seaMapLayer = L.tileLayer('https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png', {
-                    attribution: 'Map data &copy; OpenSeaMap contributors'
+                    attribution: 'Map data &copy; OpenSeaMap'
                 });
 
                 map = L.map('map', { 
@@ -381,6 +376,7 @@
 
                 L.control.layers(baseMaps, overlayMaps, { position: 'topright' }).addTo(map);
 
+                // Klik op kaart -> Analyseer water op de gekozen coördinaten
                 map.on('click', function(e) { 
                     currentLat = e.latlng.lat; 
                     currentLng = e.latlng.lng;
@@ -391,19 +387,46 @@
                         userMarker = L.marker([currentLat, currentLng]).addTo(map);
                     }
                     
-                    document.getElementById('water-info').innerText = `Gekozen coördinaten: ${currentLat.toFixed(4)}, ${currentLng.toFixed(4)}`;
-                    
-                    const visplannerLink = document.getElementById('visplanner-link');
-                    if(visplannerLink) {
-                        visplannerLink.href = `https://www.visplanner.nl/?lat=${currentLat}&lng=${currentLng}`;
-                    }
+                    analyzeWaterRights(currentLat, currentLng);
                 });
             }
             
             map.invalidateSize();
         }
 
-        // Plaats Zoekfunctie (Nominatim API)
+        // Live Water & Visrecht Analyse via OpenStreetMap Overpass API
+        function analyzeWaterRights(lat, lng) {
+            const infoBox = document.getElementById('water-info');
+            infoBox.innerHTML = `⏳ Watergegevens ophalen voor (${lat.toFixed(4)}, ${lng.toFixed(4)})...`;
+
+            const radius = 50; // meter rondom klikpunt
+            const query = `[out:json];(way(around:${radius},${lat},${lng})["waterway"];relation(around:${radius},${lat},${lng})["natural"="water"];);out tags;`;
+
+            fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.elements && data.elements.length > 0) {
+                        const tags = data.elements[0].tags || {};
+                        const waterName = tags.name || tags.waterway || "Gedetecteerd binnenwater";
+                        const type = tags.waterway || tags.water || "Watergang";
+
+                        let vispasStatus = "📘 **Landelijke VISpas:** Vissen over het algemeen toegestaan (Grote wateren / Kanalen).";
+                        if (type === "canal" || type === "river") {
+                            vispasStatus = "📘 **Landelijke VISpas:** Vissen toegestaan in hoofdvaarweg / kanaal.";
+                        } else if (type === "ditch" || type === "stream") {
+                            vispasStatus = "📙 **Polderwater / Sloot:** Mogelijk verenigingswater van lokale hengelsportvereniging.";
+                        }
+
+                        infoBox.innerHTML = `<b>📍 ${waterName}</b> (${type})<br>${vispasStatus}<br><small style="color:#7f8c8d;">Coördinaten: ${lat.toFixed(4)}, ${lng.toFixed(4)}</small>`;
+                    } else {
+                        infoBox.innerHTML = `<b>📍 Gekozen locatie:</b> ${lat.toFixed(4)}, ${lng.toFixed(4)}<br>📘 **VISpas Advies:** Controleer of dit water is opgenomen in de Gezamenlijke Lijst van Nederlandse Viswateren.`;
+                    }
+                })
+                .catch(() => {
+                    infoBox.innerHTML = `<b>📍 Gekozen locatie:</b> ${lat.toFixed(4)}, ${lng.toFixed(4)}<br>📘 **VISpas Advies:** Landelijke of regionale VISpas vereist.`;
+                });
+        }
+
         function searchLocation() {
             const query = document.getElementById('search-input').value;
             if (!query) return;
@@ -425,18 +448,16 @@
                             userMarker = L.marker([lat, lon]).addTo(map);
                         }
 
-                        document.getElementById('water-info').innerText = `Gevonden: ${data[0].display_name.split(',')[0]} (${lat.toFixed(4)}, ${lon.toFixed(4)})`;
-                        document.getElementById('visplanner-link').href = `https://www.visplanner.nl/?lat=${lat}&lng=${lon}`;
+                        analyzeWaterRights(lat, lon);
                     } else {
                         alert("Locatie niet gevonden. Probeer een andere plaatsnaam of kanaal.");
                     }
                 })
-                .catch(err => {
+                .catch(() => {
                     alert("Er is een fout opgetreden bij het zoeken.");
                 });
         }
 
-        // Categorie & Vissoort Selectie
         function selectCategory(catKey, btn) {
             document.querySelectorAll('.btn-cat').forEach(b => b.classList.remove('active'));
             if(btn) btn.classList.add('active');
@@ -485,8 +506,7 @@
                             userMarker = L.marker([currentLat, currentLng]).addTo(map);
                         }
                     }
-                    document.getElementById('water-info').innerText = `GPS Locatie: ${currentLat.toFixed(4)}, ${currentLng.toFixed(4)}`;
-                    document.getElementById('visplanner-link').href = `https://www.visplanner.nl/?lat=${currentLat}&lng=${currentLng}`;
+                    analyzeWaterRights(currentLat, currentLng);
                 });
             }
         }
