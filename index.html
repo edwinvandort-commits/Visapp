@@ -29,9 +29,6 @@
         
         #map { flex-grow: 1; width: 100%; z-index: 1; }
         
-        .legend { background: white; padding: 8px 12px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.3); font-size: 12px; line-height: 18px; }
-        .legend i { width: 14px; height: 14px; float: left; margin-right: 8px; opacity: 0.8; border-radius: 3px; }
-
         #dashboard { padding: 15px; background: white; max-height: 48%; overflow-y: auto; border-top-left-radius: 16px; border-top-right-radius: 16px; z-index: 1000; box-shadow: 0 -4px 12px rgba(0,0,0,0.2); }
         #dashboard h3 { margin: 0 0 10px 0; color: #1b2a47; font-size: 18px; display: flex; justify-content: space-between; align-items: center; }
         .btn-location { background: #27ae60; color: white; border: none; padding: 8px 14px; border-radius: 20px; font-size: 12px; font-weight: bold; cursor: pointer; }
@@ -42,6 +39,10 @@
         .tip-box.tackle { border-left-color: #27ae60; background: #f0fff4; }
         .tip-box.rules { border-left-color: #8e44ad; background: #f9f0ff; }
         .tip-box strong { display: block; margin-bottom: 4px; font-size: 14px; }
+
+        /* Loading Spinner */
+        .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(0,119,182,0.3); border-radius: 50%; border-top-color: #0077b6; animation: spin 0.8s linear infinite; vertical-align: middle; margin-right: 5px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
@@ -80,7 +81,7 @@
             <div id="advice-content">
                 <div class="tip-box water-status">
                     <strong>🌊 Visrecht & Waterdetectie:</strong> 
-                    <span id="water-info">Aan het scannen naar water...</span>
+                    <span id="water-info">Selecteer een punt op de kaart...</span>
                 </div>
 
                 <div class="tip-box hotspot">
@@ -185,54 +186,88 @@
             map.invalidateSize();
         }
 
-        // Zoek naar ECHT water in de buurt via OpenStreetMap Overpass API
         function findWaterAndPlaceHotspots(lat, lng) {
-            // Wis oude speldjes
             hotspotMarkers.forEach(m => map.removeLayer(m));
             hotspotMarkers = [];
 
-            document.getElementById('water-info').innerText = "Water detecteren in de buurt...";
+            // UI: Spinner tonen
+            document.getElementById('water-info').innerHTML = `<span class="spinner"></span> Water & structuren analyseren...`;
 
-            // Overpass query: zoek water (natural=water, waterway=*) binnen 300 meter
-            const query = `[out:json];(way["natural"="water"](around:300,${lat},${lng});way["waterway"](around:300,${lat},${lng});relation["natural"="water"](around:300,${lat},${lng}););out center;`;
+            // Overpass query: Zoek wateren én structuren (zoals bruggen/stuwen) binnen 350m
+            const query = `[out:json][timeout:10];
+                (
+                  way["natural"="water"](around:350,${lat},${lng});
+                  way["waterway"](around:350,${lat},${lng});
+                  way["bridge"](around:350,${lat},${lng});
+                  node["waterway"="weir"](around:350,${lat},${lng});
+                  node["waterway"="lock_gate"](around:350,${lat},${lng});
+                );
+                out center 10;`;
+            
             const url = "https://overpass-api.de/api/interpreter?data=" + encodeURIComponent(query);
 
             fetch(url)
-                .then(res => res.json())
+                .then(res => {
+                    if(!res.ok) throw new Error("API Fout");
+                    return res.json();
+                })
                 .then(data => {
                     if (data.elements && data.elements.length > 0) {
-                        // Water gevonden!
-                        let waterCount = 0;
-                        data.elements.forEach((el, index) => {
-                            if (index < 3) { // Maximaal 3 hotspots op het dichtstbijzijnde water
-                                let wLat = el.center ? el.center.lat : el.lat;
-                                let wLng = el.center ? el.center.lon : el.lon;
+                        let waterFound = false;
+                        let count = 0;
 
-                                if (wLat && wLng) {
-                                    let waterName = el.tags.name || "Sloot / Vijver / Vaart";
-                                    let marker = L.marker([wLat, wLng]).addTo(map);
-                                    marker.bindPopup(`<b>📍 Hotspot: ${selectedFish}</b><br><b>${waterName}</b><br>Gedetecteerde waterstructuur voor deze vis.`);
-                                    hotspotMarkers.push(marker);
-                                    waterCount++;
+                        data.elements.forEach((el) => {
+                            if (count >= 3) return; // Max 3 hotspots
+                            
+                            let wLat = el.center ? el.center.lat : el.lat;
+                            let wLng = el.center ? el.center.lon : el.lon;
+
+                            if (wLat && wLng) {
+                                waterFound = true;
+                                let tags = el.tags || {};
+                                let spotTitle = "📍 Hotspot Zone";
+                                let spotDesc = "Gedetecteerde waterstructuur.";
+
+                                // Specifieke OpenStreetMap feature herkenning
+                                if (tags.bridge) {
+                                    spotTitle = "🌉 Brug / Schaduwzone";
+                                    spotDesc = `Ideale schuillocatie voor ${selectedFish}. Vang ze onder de schaduwrand!`;
+                                } else if (tags.waterway === 'weir' || tags.waterway === 'lock_gate') {
+                                    spotTitle = "🌊 Stuw / Sluis (Stroming)";
+                                    spotDesc = "Zuurstofrijk water met veel aasvis. Topstek!";
+                                } else if (tags.waterway === 'river' || tags.waterway === 'canal') {
+                                    let name = tags.name || "Kanaal / Rivier";
+                                    spotTitle = `🌊 ${name}`;
+                                    spotDesc = `Stromend/Diep water. Zoek naar taluds en stroomnaden voor ${selectedFish}.`;
+                                } else {
+                                    let name = tags.name || "Sloot / Vijver";
+                                    spotTitle = `🐟 ${name}`;
+                                    spotDesc = `Ondiep of stilstaand water. Vis langs rietkragen en lelies.`;
                                 }
+
+                                let marker = L.marker([wLat, wLng]).addTo(map);
+                                marker.bindPopup(`<b>${spotTitle}</b><br>${spotDesc}`);
+                                hotspotMarkers.push(marker);
+                                count++;
                             }
                         });
 
-                        // Bepaal Visrecht
-                        let isRijkswater = (lat < 52.00 && lng > 5.90) || (lat > 52.30 && lng < 4.90);
-                        if(isRijkswater) {
-                            document.getElementById('water-info').innerHTML = `<b style="color:#0077b6;">🌊 Landelijk VISpaswater</b> — Water gedetecteerd! Vissen toegestaan met Landelijke VISpas.`;
+                        // Verbeterde Visrecht categorisatie
+                        let mainWater = data.elements.find(e => e.tags && (e.tags.waterway === 'river' || e.tags.waterway === 'canal' || e.tags.natural === 'water'));
+                        let isBigWater = mainWater && (mainWater.tags.waterway === 'river' || mainWater.tags.waterway === 'canal');
+
+                        if(isBigWater) {
+                            document.getElementById('water-info').innerHTML = `<b style="color:#0077b6;">🌊 Landelijk VISpaswater</b> — Grote waterweg gedetecteerd. Vissen toegestaan met Landelijke VISpas.`;
                         } else {
-                            document.getElementById('water-info').innerHTML = `<b style="color:#d35400;">🔒 Verenigingswater (HSV)</b> — Water gedetecteerd! HSV vergunning of VISpas vereist.`;
+                            document.getElementById('water-info').innerHTML = `<b style="color:#d35400;">🔒 Verenigingswater (HSV)</b> — Binnenwater/Polder gedetecteerd. Lokale HSV vergunning vereist.`;
                         }
 
                     } else {
-                        // Geen water in de buurt (bijv. Midden in een woonwijk/straat)
-                        document.getElementById('water-info').innerHTML = `<b style="color:#e74c3c;">🚫 Geen water op deze plek</b> — Je klikt in een woonwijk of op het land. Tik op een sloot, kanaal of meer.`;
+                        document.getElementById('water-info').innerHTML = `<b style="color:#e74c3c;">🚫 Geen water op deze plek</b> — Geen sloten, vaarten of plassen binnen 350m. Klik op het water.`;
                     }
                 })
                 .catch(() => {
-                    document.getElementById('water-info').innerText = "Kon waterdata niet ophalen.";
+                    document.getElementById('water-info').innerHTML = `<b style="color:#7f8c8d;">⚠️ Kon waterdata niet ophalen.</b> Probeer opnieuw te klikken.`;
                 });
         }
 
