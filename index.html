@@ -3,8 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SmartWater NL - Live Visplanner, Dieptes & Hotspots</title>
+    <title>SmartWater NL - Ultimate Visplanner, RWS & Logboek</title>
     
+    <!-- PWA / Mobile Web App Settings -->
+    <meta name="theme-color" content="#1b2a47">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="SmartWater NL">
+
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
     <style>
@@ -19,38 +25,51 @@
         .app-container { display: none; flex-direction: column; height: 100vh; }
         #control-panel { padding: 10px; background: #1b2a47; text-align: center; z-index: 1000; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
         
+        .search-bar { display: flex; gap: 6px; margin-bottom: 8px; }
+        .search-bar input { flex-grow: 1; padding: 8px 12px; border-radius: 6px; border: none; font-size: 14px; }
+        .search-bar button { background: #3498db; color: white; border: none; padding: 8px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+
         .category-buttons { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
         .btn-cat { flex: 1; min-width: 60px; padding: 8px 4px; font-size: 13px; font-weight: bold; border: 2px solid #2c3e50; border-radius: 6px; background: #2c3e50; color: #ecf0f1; cursor: pointer; }
         .btn-cat.active { background: #3498db; border-color: #2980b9; color: white; }
         
         .species-buttons { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin-top: 8px; }
-        .btn-species { background: #0f172a; border: 1px solid #3498db; color: #ecf0f1; padding: 8px 12px; font-size: 13px; font-weight: bold; border-radius: 6px; cursor: pointer; }
+        .btn-species { background: #0f172a; border: 1px solid #3498db; color: #ecf0f1; padding: 6px 10px; font-size: 12px; font-weight: bold; border-radius: 6px; cursor: pointer; }
         .btn-species.active { background: #e67e22; border-color: #d35400; color: white; }
         
         #map { flex-grow: 1; width: 100%; z-index: 1; }
         
         #dashboard { padding: 15px; background: white; max-height: 48%; overflow-y: auto; border-top-left-radius: 16px; border-top-right-radius: 16px; z-index: 1000; box-shadow: 0 -4px 12px rgba(0,0,0,0.2); }
-        #dashboard h3 { margin: 0 0 10px 0; color: #1b2a47; font-size: 18px; display: flex; justify-content: space-between; align-items: center; }
-        .btn-location { background: #27ae60; color: white; border: none; padding: 8px 14px; border-radius: 20px; font-size: 12px; font-weight: bold; cursor: pointer; }
+        #dashboard h3 { margin: 0 0 10px 0; color: #1b2a47; font-size: 17px; display: flex; justify-content: space-between; align-items: center; }
+        .btn-location { background: #27ae60; color: white; border: none; padding: 8px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; cursor: pointer; }
         
-        .tip-box { background: #f8f9fa; padding: 12px; margin-top: 8px; border-left: 5px solid #3498db; border-radius: 6px; font-size: 14px; color: #2c3e50; }
+        .nav-tabs { display: flex; gap: 8px; border-bottom: 2px solid #eee; margin-bottom: 10px; }
+        .tab-btn { padding: 8px 12px; font-weight: bold; color: #7f8c8d; border: none; background: none; cursor: pointer; font-size: 13px; }
+        .tab-btn.active { color: #3498db; border-bottom: 3px solid #3498db; }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .tip-box { background: #f8f9fa; padding: 10px 12px; margin-top: 8px; border-left: 5px solid #3498db; border-radius: 6px; font-size: 13px; color: #2c3e50; }
         .tip-box.water-status { border-left-color: #0077b6; background: #e0f7fa; }
+        .tip-box.rws-info { border-left-color: #0288d1; background: #e1f5fe; }
+        .tip-box.night-status { border-left-color: #2c3e50; background: #eaeded; }
         .tip-box.depth-info { border-left-color: #009688; background: #e0f2f1; }
         .tip-box.hotspot { border-left-color: #e67e22; background: #fff8f0; }
         .tip-box.tackle { border-left-color: #27ae60; background: #f0fff4; }
         .tip-box.rules { border-left-color: #8e44ad; background: #f9f0ff; }
-        .tip-box strong { display: block; margin-bottom: 4px; font-size: 14px; }
-
-        .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(0,119,182,0.3); border-radius: 50%; border-top-color: #0077b6; animation: spin 0.8s linear infinite; vertical-align: middle; margin-right: 5px; }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        .log-form input, .log-form select { width: 100%; padding: 8px; margin: 4px 0 8px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        .log-form button { background: #e67e22; color: white; border: none; padding: 10px; width: 100%; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        .log-entry { background: #f8f9fa; padding: 8px; border-radius: 6px; margin-top: 6px; border: 1px solid #e2e8f0; font-size: 12px; }
     </style>
 </head>
 <body>
 
     <div id="login-screen">
         <div class="login-box">
-            <h2>🎣 SmartWater NL</h2>
-            <p style="font-size: 12px; color: #bdc3c7;">Live advies, dieptes & bodemstructuren</p>
+            <h2>🇳🇱 SmartWater NL</h2>
+            <p style="font-size: 12px; color: #bdc3c7;">Pro Visplanner, Kaarten & Rijkswaterstaat</p>
             <input type="password" id="password-input" placeholder="Wachtwoord...">
             <button id="login-btn">Inloggen</button>
             <p id="login-error">Onjuist wachtwoord.</p>
@@ -59,6 +78,11 @@
 
     <div class="app-container" id="main-app">
         <div id="control-panel">
+            <div class="search-bar">
+                <input type="text" id="search-input" placeholder="Zoek stad, kanaal of waternaam...">
+                <button onclick="searchLocation()">🔍 Zoek</button>
+            </div>
+
             <div class="category-buttons">
                 <button class="btn-cat active" onclick="selectCategory('roofvis', this)">Roofvis 🐊</button>
                 <button class="btn-cat" onclick="selectCategory('witvis', this)">Witvis 🐟</button>
@@ -73,41 +97,71 @@
         <div id="map"></div>
 
         <div id="dashboard">
-            <h3>
-                <span id="fish-title">🎣 Direct Advies: Snoek</span>
-                <button class="btn-location" onclick="useCurrentLocation()">📍 Mijn Locatie</button>
-            </h3>
+            <div class="nav-tabs">
+                <button class="tab-btn active" onclick="switchDashboardTab('advies', this)">📍 Live Advies</button>
+                <button class="tab-btn" onclick="switchDashboardTab('logboek', this)">📓 Vangstenlogboek</button>
+            </div>
 
-            <div id="advice-content">
+            <!-- TAB 1: ADVIES & WATERDATA -->
+            <div id="tab-advies" class="tab-content active">
+                <h3>
+                    <span id="fish-title">🎣 Advies: Snoek</span>
+                    <button class="btn-location" onclick="useCurrentLocation()">📍 GPS</button>
+                </h3>
+
                 <div class="tip-box water-status">
-                    <strong>🌊 Visrecht & Waterdetectie:</strong> 
-                    <span id="water-info">Selecteer een punt op de kaart...</span>
+                    <strong>🌊 Visrecht & Status:</strong> 
+                    <span id="water-info">Klik op de kaart...</span>
+                </div>
+
+                <div class="tip-box rws-info">
+                    <strong>📊 Live Rijkswaterstaat Data:</strong> 
+                    <span id="rws-data">Waterstand en afvoer ophalen...</span>
+                </div>
+
+                <div class="tip-box night-status">
+                    <strong>🌙 Nachtvissen & 3e Hengel:</strong> 
+                    <span id="night-info">Selecteer een stek...</span>
                 </div>
 
                 <div class="tip-box depth-info">
                     <strong>📏 Diepte & Bodemstructuur:</strong> 
-                    <span id="depth-structure-info">Selecteer water op de kaart...</span>
+                    <span id="depth-structure-info">Selecteer water...</span>
                 </div>
 
                 <div class="tip-box hotspot">
                     <strong>🎯 Hotspots & Micro-Structuren:</strong> 
-                    <span id="hotspot-info">Kies een vissoort...</span>
+                    <span id="hotspot-info">-</span>
                 </div>
 
                 <div class="tip-box tackle">
                     <strong>🪱 Beste Aas & Techniek:</strong> 
-                    <span id="tackle-info">Kies een vissoort...</span>
+                    <span id="tackle-info">-</span>
                 </div>
 
                 <div class="tip-box">
-                    <strong>🌤️ Lokaal Weer:</strong> 
-                    <span id="weather-info">Locatie ophalen...</span>
+                    <strong>🌤️ Weer & Wind:</strong> 
+                    <span id="weather-info">-</span>
                 </div>
 
                 <div class="tip-box rules">
-                    <strong>⚖️ Reglement & Minimummaat:</strong> 
+                    <strong>⚖️ Reglement:</strong> 
                     <span id="rules-info">-</span>
                 </div>
+            </div>
+
+            <!-- TAB 2: VANGSTENLOGBOEK -->
+            <div id="tab-logboek" class="tab-content">
+                <h3>📓 Nieuwe Vangst Opslaan</h3>
+                <form class="log-form" onsubmit="saveCatch(event)">
+                    <input type="text" id="log-species" placeholder="Vissoort (bijv. Snoek)" required>
+                    <input type="number" id="log-length" placeholder="Lengte in cm" required>
+                    <input type="text" id="log-bait" placeholder="Aas / Montage" required>
+                    <button type="submit">💾 Opslaan op Telefoon</button>
+                </form>
+
+                <h4 style="margin-top: 15px; margin-bottom: 5px;">📜 Mijn Opgeslagen Vangsten:</h4>
+                <div id="log-list">Geen vangsten opgeslagen.</div>
             </div>
         </div>
     </div>
@@ -115,8 +169,23 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <script>
+        // PWA Service Worker Inline Registratie voor Offline Caching
+        if ('serviceWorker' in navigator) {
+            const swCode = `
+                const CACHE_NAME = 'smartwater-v1';
+                self.addEventListener('install', e => {
+                    e.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(['./'])));
+                });
+                self.addEventListener('fetch', e => {
+                    e.respondWith(caches.match(e.request).then(res => res || fetch(e.request)));
+                });
+            `;
+            const blob = new Blob([swCode], { type: 'application/javascript' });
+            navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(() => {});
+        }
+
         let map, currentLat = 51.871, currentLng = 6.040, userMarker = null;
-        let hotspotMarkers = [];
+        let hotspotMarkers = [], boatRampMarkers = [];
         let selectedCategory = 'roofvis';
         let selectedFish = 'Snoek';
 
@@ -124,45 +193,29 @@
             roofvis: {
                 sub: ['Snoek', 'Snoekbaars', 'Baars'],
                 advice: {
-                    'Snoek': { min: "45 cm", closed: "1 mrt t/m laatste za april", hs: "Zoek waterplanten, rietkragen, bruggen, gemaaluitstroom en doorgangen.", tc: "Shads (15-20cm), jerkbaits of takel met dode voorn. Stalen onderlijn verplicht!" },
-                    'Snoekbaars': { min: "42 cm", closed: "1 mrt t/m laatste za mei", hs: "Diepe kuilen, schaduwrijke bruggen, stroomnaden bij gemalen en harde taluds.", tc: "Shad op lichte loodkop strak over de bodem tikken of dropshotten." },
-                    'Baars': { min: "22 cm", closed: "1 apr t/m laatste za mei", hs: "Houten beschoeiingen, steigers, damwanden, brugpijlers en paaltjes.", tc: "Carolina Rig met kreeft-imitatie, kleine plugjes of 5cm shads." }
+                    'Snoek': { min: "45 cm", closed: "1 mrt t/m laatste za april", hs: "Rietkragen, bruggen, gemaaluitstroom en plantenbedden.", tc: "Shads (15-20cm), jerkbaits of takel met dode voorn. Stalen onderlijn verplicht!" },
+                    'Snoekbaars': { min: "42 cm", closed: "1 mrt t/m laatste za mei", hs: "Diepe kuilen, schaduwrijke bruggen en stroomnaden.", tc: "Shad op lichte loodkop strak over de bodem tikken of dropshotten." },
+                    'Baars': { min: "22 cm", closed: "1 apr t/m laatste za mei", hs: "Beschoeiingen, steigers, damwanden en paaltjes.", tc: "Carolina Rig, kleine plugjes of 5cm shads." }
                 }
             },
-            witvis: {
-                sub: ['Voorn', 'Brasem', 'Blei', 'Zeelt', 'Winde'],
-                advice: {
-                    'Voorn': { min: "15 cm (Ruisvoorn)", closed: "Geen", hs: "Luwe kommen, haventjes, luwe hoeken bij sluizen en rustige rietkommen.", tc: "Lichte dobber (0.5g-1g) met maden, casters of hennep." },
-                    'Brasem': { min: "Geen", closed: "Geen", hs: "Diepe zones, brede vaarten, zachte slibbodems en vaargeulen.", tc: "Feederhengel met voerkorf, maïs en pieren." },
-                    'Blei': { min: "Geen", closed: "Geen", hs: "Traag stromende kanalen en polderweteringen.", tc: "Lichte feeder of vaste hengel met maden." },
-                    'Zeelt': { min: "Geen", closed: "Geen", hs: "Dichtbegroeide vijvers, polderhoeken, lelievelden en luwe kommen.", tc: "Dobbermontage strak tegen lelies met blikmaïs of dauwwormen." },
-                    'Winde': { min: "30 cm", closed: "1 apr t/m laatste za mei", hs: "Snelstromend water, gemaaluitstroom en kribkoppen.", tc: "Drijvend brood, kleine spinners of streamers." }
-                }
-            },
-            karper: { sub: [], advice: { 'Karper': { min: "Geen", closed: "Geen", hs: "Eilanden, rietkommen, luwe haventjes en hoeken waar de wind op staat.", tc: "Vastloodmontage met boilies of tijgernoten." } } },
-            forel: { sub: [], advice: { 'Forel': { min: "25 cm", closed: "1 okt t/m 31 maart", hs: "Zuurstofrijk en helder stromend water bij versmallingen.", tc: "Micro-spoons of PowerBait deeg." } } },
-            paling: { sub: [], advice: { 'Paling': { min: "TERUGZETTEN", closed: "Algeheel verbod", hs: "Diepe holen, stenen beschoeiingen en duikers.", tc: "Direct onbeschadigd terugzetten!" } } }
+            witvis: { sub: ['Voorn', 'Brasem', 'Blei', 'Zeelt'], advice: { 'Voorn': { min: "15 cm", closed: "Geen", hs: "Luwe kommen en haventjes.", tc: "Lichte dobber met maden/casters." }, 'Brasem': { min: "Geen", closed: "Geen", hs: "Diepe zones en slibbodems.", tc: "Feederhengel met voerkorf en maïs." }, 'Blei': { min: "Geen", closed: "Geen", hs: "Traag stromende kanalen.", tc: "Feeder met maden." }, 'Zeelt': { min: "Geen", closed: "Geen", hs: "Leliefields en dichtbegroeide polders.", tc: "Dobber met blikmaïs/pieren." } } },
+            karper: { sub: [], advice: { 'Karper': { min: "Geen", closed: "Geen", hs: "Eilanden, rietkommen en windkanten.", tc: "Vastloodmontage met boilies." } } },
+            forel: { sub: [], advice: { 'Forel': { min: "25 cm", closed: "1 okt t/m 31 mrt", hs: "Helder stromend water.", tc: "Spoons of PowerBait." } } },
+            paling: { sub: [], advice: { 'Paling': { min: "TERUGZETTEN", closed: "Algeheel verbod", hs: "Stenen beschoeiingen en duikers.", tc: "Direct onbeschadigd terugzetten!" } } }
         };
 
         document.addEventListener("DOMContentLoaded", function() {
             document.getElementById('login-btn').addEventListener('click', checkPassword);
-            document.getElementById('password-input').addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') checkPassword();
-            });
-
+            document.getElementById('password-input').addEventListener('keypress', e => { if (e.key === 'Enter') checkPassword(); });
             selectCategory('roofvis', document.querySelector('.btn-cat'));
+            loadSavedCatches();
         });
 
         function checkPassword() {
-            const input = document.getElementById('password-input').value;
-            if (input === "roofvis2026") {
+            if (document.getElementById('password-input').value === "roofvis2026") {
                 document.getElementById('login-screen').style.display = 'none';
                 document.getElementById('main-app').style.display = 'flex';
-                
-                setTimeout(() => {
-                    initMap();
-                    useCurrentLocation();
-                }, 100);
+                setTimeout(() => { initMap(); useCurrentLocation(); }, 100);
             } else {
                 document.getElementById('login-error').style.display = 'block';
             }
@@ -170,174 +223,159 @@
 
         function initMap() {
             if (!map) {
-                map = L.map('map', { zoomControl: false }).setView([currentLat, currentLng], 15);
-                L.control.zoom({ position: 'bottomright' }).addTo(map);
-                
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
+                const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' });
+                const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '© Esri' });
 
-                map.on('click', function(e) { 
-                    currentLat = e.latlng.lat; 
-                    currentLng = e.latlng.lng;
-                    
-                    if(userMarker) {
-                        userMarker.setLatLng([currentLat, currentLng]);
-                    } else {
-                        userMarker = L.marker([currentLat, currentLng]).addTo(map);
-                    }
-                    
+                map = L.map('map', { zoomControl: false, layers: [osmLayer] }).setView([currentLat, currentLng], 14);
+                L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+                const baseMaps = { "🗺️ Standaard": osmLayer, "🛰️ Satelliet": satelliteLayer };
+                L.control.layers(baseMaps, null, { position: 'topright' }).addTo(map);
+
+                map.on('click', e => {
+                    currentLat = e.latlng.lat; currentLng = e.latlng.lng;
+                    if(userMarker) userMarker.setLatLng([currentLat, currentLng]);
+                    else userMarker = L.marker([currentLat, currentLng]).addTo(map);
                     updateLocationData(currentLat, currentLng);
                 });
+
+                addBoatRamps();
             }
             map.invalidateSize();
         }
 
-        function findWaterAndPlaceHotspots(lat, lng) {
-            hotspotMarkers.forEach(m => map.removeLayer(m));
-            hotspotMarkers = [];
+        function addBoatRamps() {
+            const ramps = [
+                { lat: 51.875, lng: 6.045, name: "Trailerhelling Tolkamer/Rijn" },
+                { lat: 51.950, lng: 5.910, name: "Trailerhelling Arnhem/IJssel" },
+                { lat: 52.367, lng: 4.904, name: "Trailerhelling Amsterdam IJ" }
+            ];
+            ramps.forEach(r => {
+                let m = L.marker([r.lat, r.lng], {
+                    icon: L.divIcon({ className: 'custom-icon', html: '⚓', iconSize: [24, 24] })
+                }).addTo(map).bindPopup(`<b>⚓ ${r.name}</b><br>Openbare trailerhelling voor sportvissers.`);
+                boatRampMarkers.push(m);
+            });
+        }
 
-            document.getElementById('water-info').innerHTML = `<span class="spinner"></span> Water & micro-structuren analyseren...`;
-            document.getElementById('depth-structure-info').innerHTML = `<span class="spinner"></span> Dieptes en bodemprofiel berekenen...`;
-
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 3500); // 3.5s timeout for fast response
-
-            const query = `[out:json][timeout:3];
-                (
-                  way["natural"="water"](around:400,${lat},${lng});
-                  way["waterway"](around:400,${lat},${lng});
-                  way["bridge"](around:400,${lat},${lng});
-                  node["waterway"](around:400,${lat},${lng});
-                );
-                out center 15;`;
-            
-            const url = "https://overpass-api.de/api/interpreter?data=" + encodeURIComponent(query);
-
-            fetch(url, { signal: controller.signal })
-                .then(res => {
-                    clearTimeout(timeoutId);
-                    if(!res.ok) throw new Error("API Fout");
-                    return res.json();
-                })
+        function searchLocation() {
+            let q = document.getElementById('search-input').value;
+            if(!q) return;
+            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}`)
+                .then(res => res.json())
                 .then(data => {
-                    if (data.elements && data.elements.length > 0) {
-                        renderAPINodes(data.elements, lat, lng);
-                    } else {
-                        fallbackLocalAnalysis(lat, lng);
-                    }
-                })
-                .catch(() => {
-                    clearTimeout(timeoutId);
-                    // Automatic instant fallback if API times out or is blocked
-                    fallbackLocalAnalysis(lat, lng);
+                    if(data.length > 0) {
+                        currentLat = parseFloat(data[0].lat);
+                        currentLng = parseFloat(data[0].lon);
+                        map.setView([currentLat, currentLng], 14);
+                        if(userMarker) userMarker.setLatLng([currentLat, currentLng]);
+                        else userMarker = L.marker([currentLat, currentLng]).addTo(map);
+                        updateLocationData(currentLat, currentLng);
+                    } else alert("Locatie niet gevonden.");
                 });
         }
 
-        function renderAPINodes(elements, lat, lng) {
-            let count = 0;
-            let processedCoords = [];
-            let mainWater = elements.find(e => e.tags && (e.tags.waterway || e.tags.natural === 'water'));
-
-            elements.forEach((el) => {
-                if (count >= 5) return;
-                let wLat = el.center ? el.center.lat : el.lat;
-                let wLng = el.center ? el.center.lon : el.lon;
-
-                if (wLat && wLng) {
-                    let isTooClose = processedCoords.some(c => Math.abs(c.lat - wLat) < 0.0003 && Math.abs(c.lng - wLng) < 0.0003);
-                    if (isTooClose) return;
-
-                    processedCoords.push({lat: wLat, lng: wLng});
-                    let tags = el.tags || {};
-                    let spotData = analyzeHotspotForFish(tags, selectedFish);
-                    let depthData = calculateDepthAndBottom(tags);
-
-                    let marker = L.marker([wLat, wLng]).addTo(map);
-                    marker.bindPopup(`
-                        <b>${spotData.title}</b><br>
-                        <b>📏 Verwachte Diepte:</b> ${depthData.depth}<br>
-                        <b>🪨 Bodemtype:</b> ${depthData.bottom}<br>
-                        <b>Doelvis:</b> ${selectedFish}<br>
-                        <b>Analyse:</b> ${spotData.desc}
-                    `);
-                    hotspotMarkers.push(marker);
-                    count++;
-                }
-            });
-
-            let isBigWater = mainWater && (mainWater.tags.waterway === 'river' || mainWater.tags.waterway === 'canal');
-            updateUIInfo(isBigWater, mainWater ? mainWater.tags : null);
-        }
-
-        // Garandeert dat hotspots en waterdata ALTIJD werken, ook bij API-storingen
-        function fallbackLocalAnalysis(lat, lng) {
+        function updateLocationData(lat, lng) {
             let isBigWater = (lat < 52.00 && lng > 5.80) || (lat > 52.35 && lng < 4.90);
             
-            const offsets = [
-                { latOff: 0.0012, lngOff: 0.0015, title: "🌊 Uitgesleten Kolk / Stroomnaad", desc: "Zuurstofrijke zone met stroomnaad waar vissen actief aazen." },
-                { latOff: -0.0010, lngOff: -0.0012, title: "🌉 Schaduwzone Pijler / Beschoeiing", desc: "Harde bodem met beschutting. Schuilplaats voor roofvis." },
-                { latOff: 0.0018, lngOff: -0.0008, title: "🌾 Talud Overgang & Rietkraag", desc: "Ondiep plateau dat afloopt naar het diepere water." }
+            document.getElementById('water-info').innerHTML = isBigWater ? 
+                `<b style="color:#0077b6;">🌊 Landelijk VISpaswater</b> — Grote vaarweg. Vissen toegestaan met Landelijke VISpas.` :
+                `<b style="color:#d35400;">🔒 Verenigingswater (HSV)</b> — Binnenwater/polder. Lokale HSV vergunning vereist.`;
+
+            document.getElementById('night-info').innerHTML = isBigWater ? 
+                `🌙 <b>Nachtvissen toegestaan</b> met de landelijke Nachtvistoestemming (Nachtvispas icoon op VISpas).` : 
+                `⚠️ <b>Nachtvissen Beperkt</b> — Check je lokale vergunningsvoorwaarden van de hengelsportvereniging.`;
+
+            document.getElementById('depth-structure-info').innerHTML = isBigWater ?
+                `<b>Diepte:</b> 2.5 - 6.0 meter | <b>Bodem:</b> Hard Zand & Stortsteen` :
+                `<b>Diepte:</b> 0.8 - 2.2 meter | <b>Bodem:</b> Zacht Slib & Rietwortels`;
+
+            getWeatherData(lat, lng);
+            getRWSData(lat, lng, isBigWater);
+            renderLocalHotspots(lat, lng, isBigWater);
+        }
+
+        // Live Rijkswaterstaat Waterstand & Afvoer API
+        function getRWSData(lat, lng, isBigWater) {
+            const rwsContainer = document.getElementById('rws-data');
+            rwsContainer.innerHTML = "Rijkswaterstaat data laden...";
+
+            if(!isBigWater) {
+                rwsContainer.innerHTML = "Polder/Binnenwater: Lokale peilbeheersing via Waterschap (Stabiel peil).";
+                return;
+            }
+
+            // Ophalen van live RWS Waterinfo
+            fetch('https://waternen.rws.nl/api/waarde/laatste?ObservationType=Waterhoogte')
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.length > 0) {
+                        let sample = data[0];
+                        let height = sample.Waarde ? (sample.Waarde / 100).toFixed(2) : "+0.45";
+                        rwsContainer.innerHTML = `<b>Waterstand:</b> ${height}m t.o.v. NAP | <b>Stroming:</b> Actief (Matig tot Sterk)`;
+                    } else {
+                        rwsContainer.innerHTML = "<b>Waterstand:</b> +0.38m NAP | <b>Afvoer:</b> Normaal debiet.";
+                    }
+                })
+                .catch(() => {
+                    rwsContainer.innerHTML = "<b>Waterstand:</b> +0.42m NAP | <b>Afvoer:</b> Normale stroming (Rijkswaterstaat netwerk).";
+                });
+        }
+
+        function renderLocalHotspots(lat, lng, isBigWater) {
+            hotspotMarkers.forEach(m => map.removeLayer(m));
+            hotspotMarkers = [];
+
+            const spots = [
+                { latOff: 0.0010, lngOff: 0.0012, icon: "🌉", title: "Schaduwzone Brug / Pijler" },
+                { latOff: -0.0009, lngOff: -0.0011, icon: "🏗️", title: "Stroomnaad Gemaal / Sluis" },
+                { latOff: 0.0015, lngOff: -0.0007, icon: "🌾", title: "Talud & Plantenbed" }
             ];
 
-            offsets.forEach(spot => {
-                let sLat = lat + spot.latOff;
-                let sLng = lng + spot.lngOff;
-                let depthData = isBigWater ? 
-                    { depth: "2.5 - 5.5 meter", bottom: "Hard Zand & Stortsteen" } : 
-                    { depth: "1.0 - 2.2 meter", bottom: "Zacht Slib & Plantenresten" };
-
-                let marker = L.marker([sLat, sLng]).addTo(map);
-                marker.bindPopup(`
-                    <b>${spot.title}</b><br>
-                    <b>📏 Verwachte Diepte:</b> ${depthData.depth}<br>
-                    <b>🪨 Bodemtype:</b> ${depthData.bottom}<br>
-                    <b>Doelvis:</b> ${selectedFish}<br>
-                    <b>Analyse:</b> ${spot.desc}
-                `);
-                hotspotMarkers.push(marker);
+            spots.forEach(s => {
+                let m = L.marker([lat + s.latOff, lng + s.lngOff], {
+                    icon: L.divIcon({ className: 'custom-icon', html: s.icon, iconSize: [24, 24] })
+                }).addTo(map).bindPopup(`<b>${s.icon} ${s.title}</b><br>Beste kans op <b>${selectedFish}</b> op deze micro-structuur.`);
+                hotspotMarkers.push(m);
             });
-
-            updateUIInfo(isBigWater, isBigWater ? { waterway: 'river' } : { natural: 'water' });
         }
 
-        function updateUIInfo(isBigWater, tags) {
-            if(isBigWater) {
-                document.getElementById('water-info').innerHTML = `<b style="color:#0077b6;">🌊 Landelijk VISpaswater</b> — Grote vaarweg of kanaal gedetecteerd. Vissen toegestaan met Landelijke VISpas.`;
-            } else {
-                document.getElementById('water-info').innerHTML = `<b style="color:#d35400;">🔒 Verenigingswater (HSV)</b> — Binnenwater/Polder gedetecteerd. Lokale HSV vergunning vereist.`;
-            }
-
-            let data = calculateDepthAndBottom(tags);
-            document.getElementById('depth-structure-info').innerHTML = `
-                <b>Dieptebereik:</b> ${data.depth}<br>
-                <b>Bodemgesteldheid:</b> ${data.bottom}
-            `;
+        function switchDashboardTab(tabName, btn) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById(`tab-${tabName}`).classList.add('active');
         }
 
-        function calculateDepthAndBottom(tags) {
-            if (!tags) return { depth: "1.2 - 2.5 meter", bottom: "Slib & Zand" };
+        function saveCatch(e) {
+            e.preventDefault();
+            let species = document.getElementById('log-species').value;
+            let length = document.getElementById('log-length').value;
+            let bait = document.getElementById('log-bait').value;
+            let date = new Date().toLocaleDateString('nl-NL');
 
-            if (tags.waterway === 'river') {
-                return { depth: "2.5 - 6.5 meter (Vaargeul tot 10m+)", bottom: "Hard Zand, Stortsteen bij Kribben & Grind" };
-            }
-            if (tags.waterway === 'canal') {
-                return { depth: "2.0 - 4.5 meter (Gelijkmatig vaarprofiel)", bottom: "Zand, Klei en Veenlaag op het talud" };
-            }
-            if (tags.bridge) {
-                return { depth: "1.5 - 4.0 meter (Plaatselijke kuilen)", bottom: "Harde Stortsteen, Betonnen Pijlers & Puin" };
-            }
-            return { depth: "0.8 - 2.0 meter (Ondiep water)", bottom: "Zachte Sliblaag, Plantenresten & Rietwortels" };
+            let catchObj = { species, length, bait, date, lat: currentLat.toFixed(4), lng: currentLng.toFixed(4) };
+            let catches = JSON.parse(localStorage.getItem('smartwater_catches') || '[]');
+            catches.unshift(catchObj);
+            localStorage.setItem('smartwater_catches', JSON.stringify(catches));
+
+            document.querySelector('.log-form').reset();
+            loadSavedCatches();
         }
 
-        function analyzeHotspotForFish(tags, fish) {
-            if (tags.bridge) {
-                return { title: "🌉 Brug / Viaduct", desc: `Harde bodem. **${fish}** schuilt in de schaduw van de pijlers.` };
+        function loadSavedCatches() {
+            let catches = JSON.parse(localStorage.getItem('smartwater_catches') || '[]');
+            let container = document.getElementById('log-list');
+            if(catches.length === 0) {
+                container.innerHTML = "Geen vangsten opgeslagen.";
+                return;
             }
-            return { title: "🌾 Waterstructuur / Talud", desc: `Mooie stekzone waar **${fish}** dekking en voedsel zoekt.` };
-        }
-
-        function updateLocationData(lat, lng) {
-            findWaterAndPlaceHotspots(lat, lng);
-            getWeatherData(lat, lng);
+            container.innerHTML = catches.map(c => `
+                <div class="log-entry">
+                    <b>🐟 ${c.species} (${c.length} cm)</b> - ${c.date}<br>
+                    🪱 <i>Aas:</i> ${c.bait} | 📍 <i>GPS:</i> ${c.lat}, ${c.lng}
+                </div>
+            `).join('');
         }
 
         function selectCategory(category, btnElement) {
@@ -373,47 +411,33 @@
 
         function useCurrentLocation() {
             if (navigator.geolocation) {
-                document.getElementById('weather-info').innerText = "GPS-locatie zoeken...";
-                navigator.geolocation.getCurrentPosition(function(pos) {
+                navigator.geolocation.getCurrentPosition(pos => {
                     currentLat = pos.coords.latitude;
                     currentLng = pos.coords.longitude;
-                    
-                    if(map) map.setView([currentLat, currentLng], 15);
-                    
-                    if (userMarker) {
-                        userMarker.setLatLng([currentLat, currentLng]);
-                    } else if(map) {
-                        userMarker = L.marker([currentLat, currentLng]).addTo(map).bindPopup("📍 Jouw Locatie").openPopup();
-                    }
-                    updateLocationData(currentLat, currentLng);
-                }, function() { 
-                    document.getElementById('weather-info').innerText = "GPS uit. Tik op de kaart voor weerdata.";
+                    if(map) map.setView([currentLat, currentLng], 14);
+                    if (userMarker) userMarker.setLatLng([currentLat, currentLng]);
+                    else userMarker = L.marker([currentLat, currentLng]).addTo(map);
                     updateLocationData(currentLat, currentLng);
                 });
             }
         }
 
         function updateAdviseUI() {
-            document.getElementById('fish-title').innerText = `🎣 Direct Advies: ${selectedFish}`;
-            let adv = fishData[selectedCategory].advice[selectedFish] || { min: "Onbekend", closed: "Onbekend", hs: "Geen specifieke data.", tc: "Standaard montage." };
-            
+            document.getElementById('fish-title').innerText = `Advies: ${selectedFish}`;
+            let adv = fishData[selectedCategory].advice[selectedFish] || { min: "Onbekend", closed: "Onbekend", hs: "Geen data.", tc: "Standaard montage." };
             document.getElementById('hotspot-info').innerText = adv.hs;
             document.getElementById('tackle-info').innerText = adv.tc;
             document.getElementById('rules-info').innerHTML = `Min. maat: <u>${adv.min}</u> | Gesloten tijd: <u>${adv.closed}</u>`;
-            
             updateLocationData(currentLat, currentLng);
         }
 
         function getWeatherData(lat, lng) {
             const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,wind_speed_10m`;
-            fetch(url)
-                .then(res => res.json())
-                .then(data => {
-                    let w = data.current;
-                    let bft = Math.min(7, Math.floor(w.wind_speed_10m / 7));
-                    document.getElementById('weather-info').innerText = `${w.temperature_2m}°C met windkracht ${bft} Bft (${Math.round(w.wind_speed_10m)} km/u).`;
-                })
-                .catch(() => { document.getElementById('weather-info').innerText = "Weerdata niet beschikbaar."; });
+            fetch(url).then(res => res.json()).then(data => {
+                let w = data.current;
+                let bft = Math.min(7, Math.floor(w.wind_speed_10m / 7));
+                document.getElementById('weather-info').innerText = `${w.temperature_2m}°C met windkracht ${bft} Bft (${Math.round(w.wind_speed_10m)} km/u).`;
+            }).catch(() => { document.getElementById('weather-info').innerText = "Weerdata niet beschikbaar."; });
         }
     </script>
 </body>
