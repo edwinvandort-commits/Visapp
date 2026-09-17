@@ -456,10 +456,10 @@
             const infoBox = document.getElementById('water-info');
             const recBox = document.getElementById('recommendation-info');
             
-            infoBox.innerHTML = `⏳ Water & Weer analyseren...`;
-            recBox.innerHTML = `⏳ Bepalen wat nu het beste bijt...`;
+            infoBox.innerHTML = `⏳ Water & Visrecht analyseren...`;
+            recBox.innerHTML = `⏳ Live weer & visadvies berekenen...`;
 
-            // Bepaal het huidige seizoen op basis van de datum
+            // 1. Bepaal het seizoen
             const month = new Date().getMonth() + 1; 
             let season = "";
             if (month >= 3 && month <= 5) season = "Voorjaar";
@@ -467,56 +467,75 @@
             else if (month >= 9 && month <= 11) season = "Najaar";
             else season = "Winter";
 
-            const waterQuery = `[out:json];(way(around:60,${lat},${lng})["waterway"];relation(around:60,${lat},${lng})["natural"="water"];);out tags;`;
+            // 2. Haal WEER-gegevens op (met error-fallback)
             const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,wind_speed_10m,surface_pressure`;
+            fetch(weatherUrl)
+                .then(r => r.json())
+                .then(weatherData => {
+                    const temp = weatherData.current.temperature_2m;
+                    const wind = Math.round(weatherData.current.wind_speed_10m);
+                    const pressure = Math.round(weatherData.current.surface_pressure);
 
-            Promise.all([
-                fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(waterQuery)}`).then(r => r.json()),
-                fetch(weatherUrl).then(r => r.json())
-            ]).then(([waterData, weatherData]) => {
-                
-                let waterName = "Gedetecteerd Binnenwater";
-                let waterType = "polder/sloot";
-
-                if (waterData.elements && waterData.elements.length > 0) {
-                    const tags = waterData.elements[0].tags || {};
-                    waterName = tags.name || tags.waterway || "Binnenwater";
-                    waterType = tags.waterway || tags.water || "kanaal";
-                }
-
-                let vispasStatus = (waterType === "canal" || waterType === "river") 
-                    ? "📘 **Landelijke VISpas:** Grote vaarweg/kanaal."
-                    : "📙 **Verenigingswater:** Waarschijnlijk HSV vergunning vereist.";
-
-                infoBox.innerHTML = `<b>📍 ${waterName}</b> (${waterType})<br>${vispasStatus}`;
-
-                const temp = weatherData.current.temperature_2m;
-                const wind = Math.round(weatherData.current.wind_speed_10m);
-                const pressure = Math.round(weatherData.current.surface_pressure);
-
-                let advice = "";
-
-                // SEIZOENSGEBONDEN ADVIES LOGICA
-                if (season === "Winter") {
-                    advice = `❄️ <b>Winteradvies (${temp}°C):</b> Vissen liggen op de diepste punten of in rustige havens. Target <b>Snoek met doodaas</b> op de bodem of visserij met de <b>Feeder op Brasem</b> op diep water. Vis extreem traag!`;
-                } else if (season === "Voorjaar") {
-                    advice = `🌸 <b>Voorjaarsadvies (${temp}°C):</b> Vissen trekken naar de ondieptes om op te warmen en te paaien. Let op de gesloten tijd voor kunstaas/roofvis (1 apr - eind mei). **Karper** en **Zeelt** zijn nu uitstekend te bevissen op zonnige polderstekken!`;
-                } else if (season === "Zomer") {
-                    if (temp > 22) {
-                        advice = `☀️ <b>Zomeradvies (${temp}°C):</b> Warm water bevat minder zuurstof. Zoek **stromend water bij stuwen/sluizen** of vis in de vroege ochtend. Top-tijd voor **Oppervlaktekarper** en **Roofblei**!`;
-                    } else {
-                        advice = `🌿 <b>Zomeradvies (${temp}°C):</b> Hoge activiteit! Vis langs dichte plantenbedden en lelies op **Baars** en **Ruishoorn**, of 's avonds op **Snoekbaars** op de taluds.`;
+                    let advice = "";
+                    if (season === "Winter") {
+                        advice = `❄️ <b>Winteradvies (${temp}°C):</b> Vissen liggen op de diepste punten of in rustige havens. Target <b>Snoek met doodaas</b> op de bodem of visserij met de <b>Feeder op Brasem</b> op diep water. Vis extreem traag!`;
+                    } else if (season === "Voorjaar") {
+                        advice = `🌸 <b>Voorjaarsadvies (${temp}°C):</b> Vissen trekken naar de ondieptes om op te warmen en te paaien. Let op de gesloten tijd voor kunstaas/roofvis (1 apr - eind mei). **Karper** en **Zeelt** zijn nu uitstekend te bevissen op zonnige polderstekken!`;
+                    } else if (season === "Zomer") {
+                        if (temp > 22) {
+                            advice = `☀️ <b>Zomeradvies (${temp}°C):</b> Warm water bevat minder zuurstof. Zoek **stromend water bij stuwen/sluizen** of vis in de vroege ochtend. Top-tijd voor **Oppervlaktekarper** en **Roofblei**!`;
+                        } else {
+                            advice = `🌿 <b>Zomeradvies (${temp}°C):</b> Hoge activiteit! Vis langs dichte plantenbedden en lelies op **Baars** en **Ruishoorn**, of 's avonds op **Snoekbaars** op de taluds.`;
+                        }
+                    } else if (season === "Najaar") {
+                        advice = `🍂 <b>Najaarsadvies (${temp}°C):</b> **Najaars-vreetfeest!** Vissen bouwen winterreserves op. Dit is dé tijd voor grote **Snoek** en **Snoekbaars** met groter kunstaas (shads 15cm+) en zware **Karper-sessies**.`;
                     }
-                } else if (season === "Najaar") {
-                    advice = `🍂 <b>Najaarsadvies (${temp}°C):</b> **Najaars-vreetfeest!** Vissen bouwen winterreserves op. Dit is dé tijd voor grote **Snoek** en **Snoekbaars** met groter kunstaas (shads 15cm+) en zware **Karper-sessies**.`;
-                }
 
-                recBox.innerHTML = `<b>Seizoen: ${season}</b><br>${advice}<br><small style="color:#7f8c8d;">Weer: ${temp}°C | Wind: ${wind} km/u | Luchtdruk: ${pressure} hPa</small>`;
+                    recBox.innerHTML = `<b>Seizoen: ${season}</b><br>${advice}<br><small style="color:#7f8c8d;">Weer: ${temp}°C | Wind: ${wind} km/u | Luchtdruk: ${pressure} hPa</small>`;
+                })
+                .catch(() => {
+                    recBox.innerHTML = `<b>Seizoen: ${season}</b><br>💡 Geen live weerdata beschikbaar. Vis aan de hand van de gekozen vissoort-tips.`;
+                });
 
-            }).catch(() => {
-                infoBox.innerHTML = `📍 Gekozen locatie: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
-                recBox.innerHTML = `Visadvies momenteel niet beschikbaar. Probeer nogmaals te klikken.`;
-            });
+            // 3. Haal WATER-gegevens op (met robuuste overpass query)
+            const waterQuery = `[out:json][timeout:5];
+                (
+                  way(around:150,${lat},${lng})["waterway"];
+                  way(around:150,${lat},${lng})["natural"="water"];
+                  relation(around:150,${lat},${lng})["natural"="water"];
+                );
+                out tags;`;
+
+            fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(waterQuery)}`)
+                .then(r => r.json())
+                .then(waterData => {
+                    let waterName = "";
+                    let waterType = "binnenwater";
+
+                    if (waterData.elements && waterData.elements.length > 0) {
+                        for (let el of waterData.elements) {
+                            if (el.tags) {
+                                if (el.tags.name) waterName = el.tags.name;
+                                if (el.tags.waterway) waterType = el.tags.waterway;
+                                else if (el.tags.water) waterType = el.tags.water;
+                                if (waterName) break;
+                            }
+                        }
+                    }
+
+                    if (!waterName) {
+                        waterName = `Gedetecteerd Water (${waterType})`;
+                    }
+
+                    let vispasStatus = (waterType === "river" || waterType === "canal" || waterName.toLowerCase().includes("kanaal") || waterName.toLowerCase().includes("rivier")) 
+                        ? "📘 **Landelijke VISpas:** Grote vaarweg/kanaal (meestal in de VISpas)."
+                        : "📙 **Verenigingswater / Polder:** Waarschijnlijk HSV vergunning of aanvullende toestemming vereist.";
+
+                    infoBox.innerHTML = `<b>📍 ${waterName}</b><br>${vispasStatus}`;
+                })
+                .catch(() => {
+                    infoBox.innerHTML = `<b>📍 Gekozen Locatie (${lat.toFixed(4)}, ${lng.toFixed(4)})</b><br>📘 Controleer de exacte vergunning in de VISplanner app.`;
+                });
         }
 
         function searchLocation() {
