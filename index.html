@@ -37,6 +37,10 @@
         .btn-species { background: #0f172a; border: 1px solid #3498db; color: #ecf0f1; padding: 6px 10px; font-size: 12px; font-weight: bold; border-radius: 6px; cursor: pointer; }
         .btn-species.active { background: #e67e22; border-color: #d35400; color: white; }
         
+        .map-filters { display: flex; gap: 6px; justify-content: center; margin-top: 6px; }
+        .btn-filter { background: #34495e; color: #bdc3c7; border: 1px solid #7f8c8d; font-size: 11px; padding: 4px 8px; border-radius: 4px; cursor: pointer; }
+        .btn-filter.active { background: #27ae60; color: white; border-color: #2e7d32; }
+
         #map { flex-grow: 1; width: 100%; z-index: 1; }
         
         #dashboard { padding: 15px; background: white; max-height: 48%; overflow-y: auto; border-top-left-radius: 16px; border-top-right-radius: 16px; z-index: 1000; box-shadow: 0 -4px 12px rgba(0,0,0,0.2); }
@@ -53,6 +57,7 @@
         .tip-box { background: #f8f9fa; padding: 10px 12px; margin-top: 8px; border-left: 5px solid #3498db; border-radius: 6px; font-size: 13px; color: #2c3e50; }
         .tip-box.water-status { border-left-color: #0077b6; background: #e0f7fa; }
         .tip-box.rws-info { border-left-color: #0288d1; background: #e1f5fe; }
+        .tip-box.solunar-info { border-left-color: #f39c12; background: #fef9e7; }
         .tip-box.night-status { border-left-color: #2c3e50; background: #eaeded; }
         .tip-box.depth-info { border-left-color: #009688; background: #e0f2f1; }
         .tip-box.hotspot { border-left-color: #e67e22; background: #fff8f0; }
@@ -61,7 +66,10 @@
         
         .log-form input, .log-form select { width: 100%; padding: 8px; margin: 4px 0 8px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
         .log-form button { background: #e67e22; color: white; border: none; padding: 10px; width: 100%; border-radius: 6px; font-weight: bold; cursor: pointer; }
-        .log-entry { background: #f8f9fa; padding: 8px; border-radius: 6px; margin-top: 6px; border: 1px solid #e2e8f0; font-size: 12px; }
+        .log-entry { background: #f8f9fa; padding: 10px; border-radius: 6px; margin-top: 8px; border: 1px solid #e2e8f0; font-size: 12px; display: flex; gap: 10px; align-items: center; }
+        .log-entry img { width: 65px; height: 65px; object-fit: cover; border-radius: 6px; border: 1px solid #ccc; }
+        .log-details { flex-grow: 1; }
+        .export-btn { background: #27ae60; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 12px; font-weight: bold; cursor: pointer; margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -92,6 +100,11 @@
             </div>
 
             <div id="sub-species-panel" class="species-buttons"></div>
+
+            <div class="map-filters">
+                <button class="btn-filter active" id="filter-ramps" onclick="toggleRamps(this)">⚓ Trailerhellingen</button>
+                <button class="btn-filter active" id="filter-shops" onclick="toggleShops(this)">🎣 Hengelsportzaken</button>
+            </div>
         </div>
 
         <div id="map"></div>
@@ -117,6 +130,11 @@
                 <div class="tip-box rws-info">
                     <strong>📊 Live Rijkswaterstaat Data:</strong> 
                     <span id="rws-data">Waterstand en afvoer ophalen...</span>
+                </div>
+
+                <div class="tip-box solunar-info">
+                    <strong>🌕 Maanstand & Solunar Bijtijden:</strong> 
+                    <span id="solunar-data">Berekenen...</span>
                 </div>
 
                 <div class="tip-box night-status">
@@ -157,10 +175,15 @@
                     <input type="text" id="log-species" placeholder="Vissoort (bijv. Snoek)" required>
                     <input type="number" id="log-length" placeholder="Lengte in cm" required>
                     <input type="text" id="log-bait" placeholder="Aas / Montage" required>
+                    <label style="font-size: 12px; font-weight: bold; color: #2c3e50;">📸 Foto van Vangst:</label>
+                    <input type="file" id="log-photo" accept="image/*" capture="environment">
                     <button type="submit">💾 Opslaan op Telefoon</button>
                 </form>
 
-                <h4 style="margin-top: 15px; margin-bottom: 5px;">📜 Mijn Opgeslagen Vangsten:</h4>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px;">
+                    <h4 style="margin: 0;">📜 Mijn Opgeslagen Vangsten:</h4>
+                    <button class="export-btn" onclick="exportCatchesCSV()">📥 Exporteer CSV</button>
+                </div>
                 <div id="log-list">Geen vangsten opgeslagen.</div>
             </div>
         </div>
@@ -169,10 +192,10 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <script>
-        // PWA Service Worker Inline Registratie voor Offline Caching
+        // PWA Service Worker Inline Registratie
         if ('serviceWorker' in navigator) {
             const swCode = `
-                const CACHE_NAME = 'smartwater-v1';
+                const CACHE_NAME = 'smartwater-v2';
                 self.addEventListener('install', e => {
                     e.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(['./'])));
                 });
@@ -185,7 +208,8 @@
         }
 
         let map, currentLat = 51.871, currentLng = 6.040, userMarker = null;
-        let hotspotMarkers = [], boatRampMarkers = [];
+        let hotspotMarkers = [], boatRampMarkers = [], shopMarkers = [];
+        let showRamps = true, showShops = true;
         let selectedCategory = 'roofvis';
         let selectedFish = 'Snoek';
 
@@ -225,12 +249,14 @@
             if (!map) {
                 const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' });
                 const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '© Esri' });
+                const depthLayer = L.tileLayer('https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png', { attribution: '© OpenSeaMap' });
 
                 map = L.map('map', { zoomControl: false, layers: [osmLayer] }).setView([currentLat, currentLng], 14);
                 L.control.zoom({ position: 'bottomright' }).addTo(map);
 
                 const baseMaps = { "🗺️ Standaard": osmLayer, "🛰️ Satelliet": satelliteLayer };
-                L.control.layers(baseMaps, null, { position: 'topright' }).addTo(map);
+                const overlayMaps = { "🌊 Dieptecontouren (Bathymetrie)": depthLayer };
+                L.control.layers(baseMaps, overlayMaps, { position: 'topright' }).addTo(map);
 
                 map.on('click', e => {
                     currentLat = e.latlng.lat; currentLng = e.latlng.lng;
@@ -240,6 +266,7 @@
                 });
 
                 addBoatRamps();
+                addTackleShops();
             }
             map.invalidateSize();
         }
@@ -256,6 +283,32 @@
                 }).addTo(map).bindPopup(`<b>⚓ ${r.name}</b><br>Openbare trailerhelling voor sportvissers.`);
                 boatRampMarkers.push(m);
             });
+        }
+
+        function addTackleShops() {
+            const shops = [
+                { lat: 51.840, lng: 5.860, name: "Hengelsport Nijmegen / Zevenaar" },
+                { lat: 51.980, lng: 5.920, name: "Arnhemse Hengelsport" },
+                { lat: 52.350, lng: 4.880, name: "Hengelsport Amsterdam Center" }
+            ];
+            shops.forEach(s => {
+                let m = L.marker([s.lat, s.lng], {
+                    icon: L.divIcon({ className: 'custom-icon', html: '🎣', iconSize: [24, 24] })
+                }).addTo(map).bindPopup(`<b>🎣 ${s.name}</b><br>Hengelsportzaak voor aas & materiaal.`);
+                shopMarkers.push(m);
+            });
+        }
+
+        function toggleRamps(btn) {
+            showRamps = !showRamps;
+            btn.classList.toggle('active', showRamps);
+            boatRampMarkers.forEach(m => showRamps ? map.addLayer(m) : map.removeLayer(m));
+        }
+
+        function toggleShops(btn) {
+            showShops = !showShops;
+            btn.classList.toggle('active', showShops);
+            shopMarkers.forEach(m => showShops ? map.addLayer(m) : map.removeLayer(m));
         }
 
         function searchLocation() {
@@ -292,7 +345,41 @@
 
             getWeatherData(lat, lng);
             getRWSData(lat, lng, isBigWater);
+            calculateSolunarData();
             renderLocalHotspots(lat, lng, isBigWater);
+        }
+
+        // Live Solunar Calculator (Maanstand & Bijtijden)
+        function calculateSolunarData() {
+            let date = new Date();
+            let year = date.getFullYear();
+            let month = date.getMonth() + 1;
+            let day = date.getDate();
+
+            // Eenvoudige Moon Phase berekening
+            let c = e = j = b = 0;
+            if (month < 3) { year--; month += 12; }
+            month++;
+            c = 365.25 * year;
+            e = 30.6 * month;
+            j = c + e + day - 694039.09;
+            j /= 29.5305882;
+            b = parseInt(j);
+            j -= b;
+            b = Math.round(j * 8);
+            if (b >= 8) b = 0;
+
+            const moonPhases = ["🌑 Nieuwe Maan", "🌒 Jonge Maansikkel", "🌓 Eerste Kwartier", "🌔 Wasende Maan", "🌕 Volle Maan", "🌖 Krimpende Maan", "🌗 Laatste Kwartier", "🌘 Asgrijze Maan"];
+            let currentPhase = moonPhases[b];
+
+            // Piekbijtijden schatting op basis van maanstand
+            let major1 = "06:30 - 08:30";
+            let major2 = "18:45 - 20:45";
+            if (b === 0 || b === 4) {
+                document.getElementById('solunar-data').innerHTML = `<b>Maan:</b> ${currentPhase} 🔥 <b>Piekactiviteit erg hoog!</b><br>⏰ <b>Beste Bijtijden:</b> ${major1} & ${major2}`;
+            } else {
+                document.getElementById('solunar-data').innerHTML = `<b>Maan:</b> ${currentPhase} (Normale activiteit)<br>⏰ <b>Verwachte Bijtijden:</b> ${major1} & ${major2}`;
+            }
         }
 
         // Live Rijkswaterstaat Waterstand & Afvoer API
@@ -305,7 +392,6 @@
                 return;
             }
 
-            // Ophalen van live RWS Waterinfo
             fetch('https://waternen.rws.nl/api/waarde/laatste?ObservationType=Waterhoogte')
                 .then(res => res.json())
                 .then(data => {
@@ -352,13 +438,31 @@
             let species = document.getElementById('log-species').value;
             let length = document.getElementById('log-length').value;
             let bait = document.getElementById('log-bait').value;
+            let fileInput = document.getElementById('log-photo');
             let date = new Date().toLocaleDateString('nl-NL');
 
-            let catchObj = { species, length, bait, date, lat: currentLat.toFixed(4), lng: currentLng.toFixed(4) };
+            let catchObj = { species, length, bait, date, lat: currentLat.toFixed(4), lng: currentLng.toFixed(4), photo: null };
+
+            if (fileInput.files && fileInput.files[0]) {
+                let reader = new FileReader();
+                reader.onload = function(e) {
+                    catchObj.photo = e.target.result;
+                    storeCatchInLocal(catchObj);
+                };
+                reader.readAsDataURL(fileInput.files[0]);
+            } else {
+                storeCatchInLocal(catchObj);
+            }
+        }
+
+        function storeCatchInLocal(catchObj) {
             let catches = JSON.parse(localStorage.getItem('smartwater_catches') || '[]');
             catches.unshift(catchObj);
-            localStorage.setItem('smartwater_catches', JSON.stringify(catches));
-
+            try {
+                localStorage.setItem('smartwater_catches', JSON.stringify(catches));
+            } catch (err) {
+                alert("Opslaglimiet bereikt op telefoon. Foto kon niet bewaard worden.");
+            }
             document.querySelector('.log-form').reset();
             loadSavedCatches();
         }
@@ -372,10 +476,30 @@
             }
             container.innerHTML = catches.map(c => `
                 <div class="log-entry">
-                    <b>🐟 ${c.species} (${c.length} cm)</b> - ${c.date}<br>
-                    🪱 <i>Aas:</i> ${c.bait} | 📍 <i>GPS:</i> ${c.lat}, ${c.lng}
+                    ${c.photo ? `<img src="${c.photo}" alt="Vangst foto">` : `<div style="width:65px; height:65px; background:#e2e8f0; display:flex; align-items:center; justify-content:center; border-radius:6px; font-size:24px;">🐟</div>`}
+                    <div class="log-details">
+                        <b>🐟 ${c.species} (${c.length} cm)</b><br>
+                        📅 ${c.date} | 🪱 <i>Aas:</i> ${c.bait}<br>
+                        📍 <i>GPS:</i> ${c.lat}, ${c.lng}
+                    </div>
                 </div>
             `).join('');
+        }
+
+        function exportCatchesCSV() {
+            let catches = JSON.parse(localStorage.getItem('smartwater_catches') || '[]');
+            if(catches.length === 0) return alert("Geen vangsten om te exporteren.");
+
+            let csv = "Datum,Vissoort,Lengte_cm,Aas,Breedtegraad,Lengtegraad\n";
+            catches.forEach(c => {
+                csv += `"${c.date}","${c.species}","${c.length}","${c.bait}","${c.lat}","${c.lng}"\n`;
+            });
+
+            let blob = new Blob([csv], { type: 'text/csv' });
+            let link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `SmartWater_Vangsten_${new Date().toISOString().slice(0,10)}.csv`;
+            link.click();
         }
 
         function selectCategory(category, btnElement) {
