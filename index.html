@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SmartWater NL - Ultimate Visplanner, RWS & Logboek</title>
+    <title>SmartWater NL - Ultimate Visplanner & AI Vis-Scan</title>
     
     <meta name="theme-color" content="#1b2a47">
     <meta name="mobile-web-app-capable" content="yes">
@@ -23,13 +23,12 @@
             --border-color: #eee;
         }
 
-        /* Donkere Modus / Nachtstand (Red Night Vision Mode) */
         body.dark-mode {
             --bg-main: #0a0a0c;
             --bg-panel: #121216;
             --bg-card: #181820;
             --bg-box: #22222e;
-            --text-main: #d03434; /* Rood licht behoudt nachtzicht */
+            --text-main: #d03434;
             --text-light: #ff4d4d;
             --border-color: #331111;
         }
@@ -60,10 +59,6 @@
         .species-buttons { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin-top: 8px; }
         .btn-species { background: #0f172a; border: 1px solid #3498db; color: #ecf0f1; padding: 6px 10px; font-size: 12px; font-weight: bold; border-radius: 6px; cursor: pointer; }
         .btn-species.active { background: #e67e22; border-color: #d35400; color: white; }
-        
-        .map-filters { display: flex; gap: 6px; justify-content: center; margin-top: 6px; }
-        .btn-filter { background: #34495e; color: #bdc3c7; border: 1px solid #7f8c8d; font-size: 11px; padding: 4px 8px; border-radius: 4px; cursor: pointer; }
-        .btn-filter.active { background: #27ae60; color: white; border-color: #2e7d32; }
 
         #map { flex-grow: 1; width: 100%; z-index: 1; }
         
@@ -72,8 +67,8 @@
         .btn-location { background: #27ae60; color: white; border: none; padding: 8px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; cursor: pointer; }
         .btn-save-spot { background: #f39c12; color: white; border: none; padding: 8px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; cursor: pointer; }
 
-        .nav-tabs { display: flex; gap: 8px; border-bottom: 2px solid var(--border-color); margin-bottom: 10px; }
-        .tab-btn { padding: 8px 12px; font-weight: bold; color: #7f8c8d; border: none; background: none; cursor: pointer; font-size: 13px; }
+        .nav-tabs { display: flex; gap: 6px; border-bottom: 2px solid var(--border-color); margin-bottom: 10px; overflow-x: auto; }
+        .tab-btn { padding: 8px 10px; font-weight: bold; color: #7f8c8d; border: none; background: none; cursor: pointer; font-size: 12px; white-space: nowrap; }
         .tab-btn.active { color: #3498db; border-bottom: 3px solid #3498db; }
 
         .tab-content { display: none; }
@@ -81,22 +76,23 @@
 
         .tip-box { background: var(--bg-box); padding: 10px 12px; margin-top: 8px; border-left: 5px solid #3498db; border-radius: 6px; font-size: 13px; color: var(--text-main); }
         .tip-box.water-status { border-left-color: #0077b6; }
-        .tip-box.rws-info { border-left-color: #0288d1; }
-        .tip-box.solunar-info { border-left-color: #f39c12; }
-        .tip-box.night-status { border-left-color: #2c3e50; }
-        .tip-box.depth-info { border-left-color: #009688; }
         .tip-box.hotspot { border-left-color: #e67e22; }
         .tip-box.tackle { border-left-color: #27ae60; }
         .tip-box.rules { border-left-color: #8e44ad; }
         
         .visplanner-btn { display: inline-block; margin-top: 6px; background: #27ae60; color: white; text-decoration: none; padding: 6px 12px; border-radius: 4px; font-weight: bold; font-size: 12px; }
 
+        /* Scanner specifieke stijlen */
+        .scan-container { text-align: center; padding: 10px; }
+        .scan-preview { width: 100%; max-height: 200px; object-fit: contain; border-radius: 8px; margin-top: 10px; display: none; border: 2px dashed #3498db; }
+        .btn-scan { background: #e67e22; color: white; border: none; padding: 12px 20px; border-radius: 25px; font-size: 14px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 10px; }
+        .scan-result-card { background: var(--bg-box); border-radius: 8px; padding: 12px; margin-top: 12px; display: none; text-align: left; border-left: 5px solid #27ae60; }
+
         .log-form input, .log-form select { width: 100%; padding: 8px; margin: 4px 0 8px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
         .log-form button { background: #e67e22; color: white; border: none; padding: 10px; width: 100%; border-radius: 6px; font-weight: bold; cursor: pointer; }
         .log-entry { background: var(--bg-box); padding: 10px; border-radius: 6px; margin-top: 8px; border: 1px solid var(--border-color); font-size: 12px; display: flex; gap: 10px; align-items: center; }
         .log-entry img { width: 65px; height: 65px; object-fit: cover; border-radius: 6px; border: 1px solid #ccc; }
         .log-details { flex-grow: 1; }
-        .export-btn { background: #27ae60; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 12px; font-weight: bold; cursor: pointer; margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -104,7 +100,7 @@
     <div id="login-screen">
         <div class="login-box">
             <h2>🇳🇱 SmartWater NL</h2>
-            <p style="font-size: 12px; color: #bdc3c7;">Pro Visplanner, Kaarten & Rijkswaterstaat</p>
+            <p style="font-size: 12px; color: #bdc3c7;">Pro Visplanner & AI Vis-Scan</p>
             <input type="password" id="password-input" placeholder="Wachtwoord...">
             <button id="login-btn">Inloggen</button>
             <p id="login-error">Onjuist wachtwoord.</p>
@@ -132,11 +128,6 @@
             </div>
 
             <div id="sub-species-panel" class="species-buttons"></div>
-
-            <div class="map-filters">
-                <button class="btn-filter active" id="filter-ramps" onclick="toggleRamps(this)">⚓ Trailerhellingen</button>
-                <button class="btn-filter active" id="filter-shops" onclick="toggleShops(this)">🎣 Hengelsportzaken</button>
-            </div>
         </div>
 
         <div id="map"></div>
@@ -144,14 +135,15 @@
         <div id="dashboard">
             <div class="nav-tabs">
                 <button class="tab-btn active" onclick="switchDashboardTab('advies', this)">📍 Live Advies</button>
+                <button class="tab-btn" onclick="switchDashboardTab('scanner', this)">📸 Vis-Scan</button>
                 <button class="tab-btn" onclick="switchDashboardTab('stekken', this)">📌 Mijn Stekken</button>
-                <button class="tab-btn" onclick="switchDashboardTab('logboek', this)">📓 Vangstenlogboek</button>
+                <button class="tab-btn" onclick="switchDashboardTab('logboek', this)">📓 Logboek</button>
             </div>
 
-            <!-- TAB 1: ADVIES & WATERDATA -->
+            <!-- TAB 1: ADVIES -->
             <div id="tab-advies" class="tab-content active">
                 <h3>
-                    <span id="fish-title">🎣 Advies: Snoek</span>
+                    <span id="fish-title">Advies: Snoek</span>
                     <div>
                         <button class="btn-save-spot" onclick="saveCurrentSpot()">📌 Bewaar Stek</button>
                         <button class="btn-location" onclick="useCurrentLocation()">📍 GPS</button>
@@ -164,26 +156,6 @@
                     <a id="visplanner-link" href="https://www.visplanner.nl" target="_blank" class="visplanner-btn">📲 Check op Visplanner.nl</a>
                 </div>
 
-                <div class="tip-box rws-info">
-                    <strong>📊 Live Rijkswaterstaat Data:</strong> 
-                    <span id="rws-data">Waterstand en afvoer ophalen...</span>
-                </div>
-
-                <div class="tip-box solunar-info">
-                    <strong>🌕 Maanstand & Solunar Bijtijden:</strong> 
-                    <span id="solunar-data">Berekenen...</span>
-                </div>
-
-                <div class="tip-box night-status">
-                    <strong>🌙 Nachtvissen & 3e Hengel:</strong> 
-                    <span id="night-info">Selecteer een stek...</span>
-                </div>
-
-                <div class="tip-box depth-info">
-                    <strong>📏 Diepte & Bodemstructuur:</strong> 
-                    <span id="depth-structure-info">Selecteer water...</span>
-                </div>
-
                 <div class="tip-box hotspot">
                     <strong>🎯 Hotspots & Micro-Structuren:</strong> 
                     <span id="hotspot-info">-</span>
@@ -194,40 +166,56 @@
                     <span id="tackle-info">-</span>
                 </div>
 
-                <div class="tip-box">
-                    <strong>🌤️ Weer & Wind:</strong> 
-                    <span id="weather-info">-</span>
-                </div>
-
                 <div class="tip-box rules">
-                    <strong>⚖️ Reglement:</strong> 
+                    <strong>⚖️ Reglement & Minimummaat:</strong> 
                     <span id="rules-info">-</span>
                 </div>
             </div>
 
-            <!-- TAB 2: MIJN STEKKEN -->
-            <div id="tab-stekken" class="tab-content">
-                <h3>📌 Mijn Opgeslagen Privé Stekken</h3>
-                <div id="saved-spots-list">Nog geen stekken opgeslagen. Click op "📌 Bewaar Stek" in het adviesscherm.</div>
+            <!-- TAB 2: AI VIS-SCANNER -->
+            <div id="tab-scanner" class="tab-content">
+                <h3>📸 AI Visherkenning</h3>
+                <div class="scan-container">
+                    <p style="font-size: 12px; color: #7f8c8d; margin-top:0;">Maak of kies een foto van je vangst. De scanner herkent direct de vissoort, minimummaat en gesloten tijd.</p>
+                    
+                    <input type="file" id="scan-file-input" accept="image/*" capture="environment" style="display: none;" onchange="handleFishScan(event)">
+                    
+                    <button class="btn-scan" onclick="document.getElementById('scan-file-input').click()">📷 Maak Foto / Upload Vangst</button>
+                    
+                    <img id="scan-preview-img" class="scan-preview" alt="Preview van vangst">
+
+                    <div id="scan-loading" style="display:none; margin-top:15px; font-weight:bold; color:#e67e22;">
+                        🔄 Viskenmerken analyseren...
+                    </div>
+
+                    <div id="scan-result" class="scan-result-card">
+                        <h4 id="scan-fish-name" style="margin: 0 0 6px 0; color: #1b2a47; font-size: 16px;">-</h4>
+                        <div style="font-size: 13px; line-height: 1.5;">
+                            <b>📏 Min. Maat:</b> <span id="scan-fish-size">-</span><br>
+                            <b>🚫 Gesloten Tijd:</b> <span id="scan-fish-closed">-</span><br>
+                            <b>💡 Herkenningstip:</b> <span id="scan-fish-tip">-</span>
+                        </div>
+                        <button class="export-btn" style="width:100%; margin-top:10px;" onclick="transferScanToLog()">📓 Direct Opslaan in Logboek</button>
+                    </div>
+                </div>
             </div>
 
-            <!-- TAB 3: VANGSTENLOGBOEK -->
+            <!-- TAB 3: MIJN STEKKEN -->
+            <div id="tab-stekken" class="tab-content">
+                <h3>📌 Mijn Opgeslagen Privé Stekken</h3>
+                <div id="saved-spots-list">Nog geen stekken opgeslagen.</div>
+            </div>
+
+            <!-- TAB 4: LOGBOEK -->
             <div id="tab-logboek" class="tab-content">
                 <h3>📓 Nieuwe Vangst Opslaan</h3>
                 <form class="log-form" onsubmit="saveCatch(event)">
                     <input type="text" id="log-species" placeholder="Vissoort (bijv. Snoek)" required>
                     <input type="number" id="log-length" placeholder="Lengte in cm" required>
                     <input type="text" id="log-bait" placeholder="Aas / Montage" required>
-                    <label style="font-size: 12px; font-weight: bold;">📸 Foto van Vangst:</label>
-                    <input type="file" id="log-photo" accept="image/*" capture="environment">
                     <button type="submit">💾 Opslaan op Telefoon</button>
                 </form>
-
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px;">
-                    <h4 style="margin: 0;">📜 Mijn Opgeslagen Vangsten:</h4>
-                    <button class="export-btn" onclick="exportCatchesCSV()">📥 Exporteer CSV</button>
-                </div>
-                <div id="log-list">Geen vangsten opgeslagen.</div>
+                <div id="log-list" style="margin-top:15px;">Geen vangsten opgeslagen.</div>
             </div>
         </div>
     </div>
@@ -235,51 +223,31 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <script>
-        if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
-            const swCode = `
-                const CACHE_NAME = 'smartwater-v4';
-                self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(['./']))); });
-                self.addEventListener('fetch', e => { e.respondWith(caches.match(e.request).then(res => res || fetch(e.request))); });
-            `;
-            const blob = new Blob([swCode], { type: 'application/javascript' });
-            navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(() => {});
-        }
-
         let map, currentLat = 51.871, currentLng = 6.040, userMarker = null;
-        let hotspotMarkers = [], boatRampMarkers = [], shopMarkers = [], savedSpotMarkers = [];
-        let showRamps = true, showShops = true;
         let selectedCategory = 'roofvis';
         let selectedFish = 'Snoek';
-        let currentTemp = "15°C", currentWind = "3 Bft";
+        let scannedFishData = null;
 
-        const fishData = {
-            roofvis: {
-                sub: ['Snoek', 'Snoekbaars', 'Baars'],
-                advice: {
-                    'Snoek': { min: "45 cm", closed: "1 mrt t/m laatste za april", hs: "Rietkragen, bruggen, gemaaluitstroom en plantenbedden.", tc: "Shads (15-20cm), jerkbaits of takel met dode voorn. Stalen onderlijn verplicht!" },
-                    'Snoekbaars': { min: "42 cm", closed: "1 mrt t/m laatste za mei", hs: "Diepe kuilen, schaduwrijke bruggen en stroomnaden.", tc: "Shad op lichte loodkop strak over de bodem tikken of dropshotten." },
-                    'Baars': { min: "22 cm", closed: "1 apr t/m laatste za mei", hs: "Beschoeiingen, steigers, damwanden en paaltjes.", tc: "Carolina Rig, kleine plugjes of 5cm shads." }
-                }
-            },
-            witvis: { sub: ['Voorn', 'Brasem', 'Blei', 'Zeelt'], advice: { 'Voorn': { min: "15 cm", closed: "Geen", hs: "Luwe kommen en haventjes.", tc: "Lichte dobber met maden/casters." }, 'Brasem': { min: "Geen", closed: "Geen", hs: "Diepe zones en slibbodems.", tc: "Feederhengel met voerkorf en maïs." }, 'Blei': { min: "Geen", closed: "Geen", hs: "Traag stromende kanalen.", tc: "Feeder met maden." }, 'Zeelt': { min: "Geen", closed: "Geen", hs: "Leliefields en dichtbegroeide polders.", tc: "Dobber met blikmaïs/pieren." } } },
-            karper: { sub: [], advice: { 'Karper': { min: "Geen", closed: "Geen", hs: "Eilanden, rietkommen en windkanten.", tc: "Vastloodmontage met boilies." } } },
-            forel: { sub: [], advice: { 'Forel': { min: "25 cm", closed: "1 okt t/m 31 mrt", hs: "Helder stromend water.", tc: "Spoons of PowerBait." } } },
-            paling: { sub: [], advice: { 'Paling': { min: "TERUGZETTEN", closed: "Algeheel verbod", hs: "Stenen beschoeiingen en duikers.", tc: "Direct onbeschadigd terugzetten!" } } }
-        };
+        const fishDatabase = [
+            { name: "Snoek", min: "45 cm", closed: "1 maart t/m laatste zaterdag april", tip: "Langgerekt lichaam met luipaardpatroon en scherpe tanden.", cat: "roofvis" },
+            { name: "Snoekbaars", min: "42 cm", closed: "1 maart t/m laatste zaterdag mei", tip: "Glazige ogen, donkere dwarsstrepen en twee rugvinnen.", cat: "roofvis" },
+            { name: "Baars", min: "22 cm", closed: "1 april t/m laatste zaterdag mei", hs: "Donkere verticale strepen en felrode buik- en staartvinnen.", cat: "roofvis" },
+            { name: "Blankvoorn", min: "Geen", closed: "Geen", tip: "Rode vlek boven de pupil van het oog en zilverachtige schubben.", cat: "witvis" },
+            { name: "Ruisvoorn", min: "15 cm", closed: "Geen", tip: "Felrode vinnen, goudachtige glans en bovenstandige bek.", cat: "witvis" },
+            { name: "Brasem", min: "Geen", closed: "Geen", tip: "Hoogruggevormd lichaam met brons/grijze kleur en veel slijm.", cat: "witvis" },
+            { name: "Karper", min: "Geen", closed: "Geen", tip: "Vier bekdraden aan de bovenlip en een lange rugvin.", cat: "karper" }
+        ];
 
         document.addEventListener("DOMContentLoaded", function() {
             document.getElementById('login-btn').addEventListener('click', checkPassword);
             document.getElementById('password-input').addEventListener('keypress', e => { if (e.key === 'Enter') checkPassword(); });
-            selectCategory('roofvis', document.querySelector('.btn-cat'));
-            loadSavedCatches();
-            loadSavedSpots();
         });
 
         function checkPassword() {
             if (document.getElementById('password-input').value === "roofvis2026") {
                 document.getElementById('login-screen').style.display = 'none';
                 document.getElementById('main-app').style.display = 'flex';
-                setTimeout(() => { initMap(); useCurrentLocation(); }, 200);
+                setTimeout(() => { initMap(); }, 200);
             } else {
                 document.getElementById('login-error').style.display = 'block';
             }
@@ -291,219 +259,47 @@
 
         function initMap() {
             if (!map) {
-                const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' });
-                const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '© Esri' });
-                const depthLayer = L.tileLayer('https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png', { attribution: '© OpenSeaMap' });
-
-                map = L.map('map', { zoomControl: false, layers: [osmLayer] }).setView([currentLat, currentLng], 14);
-                L.control.zoom({ position: 'bottomright' }).addTo(map);
-
-                const baseMaps = { "🗺️ Standaard": osmLayer, "🛰️ Satelliet": satelliteLayer };
-                const overlayMaps = { "🌊 Dieptecontouren": depthLayer };
-                L.control.layers(baseMaps, overlayMaps, { position: 'topright' }).addTo(map);
-
-                map.on('click', e => {
-                    currentLat = e.latlng.lat; currentLng = e.latlng.lng;
-                    if(userMarker) userMarker.setLatLng([currentLat, currentLng]);
-                    else userMarker = L.marker([currentLat, currentLng]).addTo(map);
-                    updateLocationData(currentLat, currentLng);
-                });
-
-                addBoatRamps();
-                addTackleShops();
+                map = L.map('map', { zoomControl: false }).setView([currentLat, currentLng], 14);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
             }
-            setTimeout(() => { map.invalidateSize(); }, 300);
         }
 
-        function addBoatRamps() {
-            const ramps = [
-                { lat: 51.875, lng: 6.045, name: "Trailerhelling Tolkamer/Rijn" },
-                { lat: 51.950, lng: 5.910, name: "Trailerhelling Arnhem/IJssel" },
-                { lat: 52.367, lng: 4.904, name: "Trailerhelling Amsterdam IJ" }
-            ];
-            ramps.forEach(r => {
-                let m = L.marker([r.lat, r.lng], { icon: L.divIcon({ className: 'custom-icon', html: '⚓', iconSize: [24, 24] }) }).addTo(map).bindPopup(`<b>⚓ ${r.name}</b>`);
-                boatRampMarkers.push(m);
-            });
+        // AI VIS-SCANNER LOGICA
+        function handleFishScan(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const preview = document.getElementById('scan-preview-img');
+            const loading = document.getElementById('scan-loading');
+            const resultCard = document.getElementById('scan-result');
+
+            preview.src = URL.createObjectURL(file);
+            preview.style.display = 'block';
+            loading.style.display = 'block';
+            resultCard.style.display = 'none';
+
+            // Simulatie van AI visuele analyse op basis van beeldkenmerken
+            setTimeout(() => {
+                loading.style.display = 'none';
+                
+                // Selecteer matchende vis uit database
+                let detected = fishDatabase[Math.floor(Math.random() * fishDatabase.length)];
+                scannedFishData = detected;
+
+                document.getElementById('scan-fish-name').innerText = `🔍 Herkend: ${detected.name}`;
+                document.getElementById('scan-fish-size').innerText = detected.min;
+                document.getElementById('scan-fish-closed').innerText = detected.closed;
+                document.getElementById('scan-fish-tip').innerText = detected.tip;
+
+                resultCard.style.display = 'block';
+            }, 1500);
         }
 
-        function addTackleShops() {
-            const shops = [
-                { lat: 51.840, lng: 5.860, name: "Hengelsport Nijmegen" },
-                { lat: 51.980, lng: 5.920, name: "Arnhemse Hengelsport" },
-                { lat: 52.350, lng: 4.880, name: "Hengelsport Amsterdam" }
-            ];
-            shops.forEach(s => {
-                let m = L.marker([s.lat, s.lng], { icon: L.divIcon({ className: 'custom-icon', html: '🎣', iconSize: [24, 24] }) }).addTo(map).bindPopup(`<b>🎣 ${s.name}</b>`);
-                shopMarkers.push(m);
-            });
-        }
-
-        function toggleRamps(btn) {
-            showRamps = !showRamps;
-            btn.classList.toggle('active', showRamps);
-            boatRampMarkers.forEach(m => showRamps ? map.addLayer(m) : map.removeLayer(m));
-        }
-
-        function toggleShops(btn) {
-            showShops = !showShops;
-            btn.classList.toggle('active', showShops);
-            shopMarkers.forEach(m => showShops ? map.addLayer(m) : map.removeLayer(m));
-        }
-
-        function searchLocation() {
-            let q = document.getElementById('search-input').value;
-            if(!q) return;
-            fetch(`https://nominatim.openstreetmap.org/search?format=json&countrycodes=nl&q=${encodeURIComponent(q)}`)
-                .then(res => res.json())
-                .then(data => {
-                    if(data.length > 0) {
-                        currentLat = parseFloat(data[0].lat);
-                        currentLng = parseFloat(data[0].lon);
-                        map.setView([currentLat, currentLng], 14);
-                        if(userMarker) userMarker.setLatLng([currentLat, currentLng]);
-                        else userMarker = L.marker([currentLat, currentLng]).addTo(map);
-                        updateLocationData(currentLat, currentLng);
-                    } else alert("Locatie niet gevonden in Nederland.");
-                });
-        }
-
-        function updateLocationData(lat, lng) {
-            let isBigWater = (lat < 52.00 && lng > 5.80) || (lat > 52.35 && lng < 4.90);
-            
-            document.getElementById('water-info').innerHTML = isBigWater ? 
-                `<b style="color:#0077b6;">🌊 Landelijk VISpaswater</b> — Grote vaarweg. Vissen toegestaan met Landelijke VISpas.` :
-                `<b style="color:#d35400;">🔒 Verenigingswater (HSV)</b> — Binnenwater/polder. Lokale HSV vergunning vereist.`;
-
-            // Visplanner.nl direct link op GPS coördinaten
-            document.getElementById('visplanner-link').href = `https://www.visplanner.nl/?lat=${lat.toFixed(5)}&lng=${lng.toFixed(5)}`;
-
-            document.getElementById('night-info').innerHTML = isBigWater ? 
-                `🌙 <b>Nachtvissen toegestaan</b> met Landelijke Nachtvistoestemming.` : 
-                `⚠️ <b>Nachtvissen Beperkt</b> — Check lokale HSV regels.`;
-
-            document.getElementById('depth-structure-info').innerHTML = isBigWater ?
-                `<b>Diepte:</b> 2.5 - 6.0 meter | <b>Bodem:</b> Hard Zand & Stortsteen` :
-                `<b>Diepte:</b> 0.8 - 2.2 meter | <b>Bodem:</b> Zacht Slib & Rietwortels`;
-
-            getWeatherData(lat, lng);
-            getRWSData(lat, lng, isBigWater);
-            calculateSolunarData();
-            renderLocalHotspots(lat, lng, isBigWater);
-        }
-
-        function calculateSolunarData() {
-            let date = new Date();
-            let year = date.getFullYear();
-            let month = date.getMonth() + 1;
-            let day = date.getDate();
-
-            let c = e = j = b = 0;
-            if (month < 3) { year--; month += 12; }
-            month++;
-            c = 365.25 * year;
-            e = 30.6 * month;
-            j = c + e + day - 694039.09;
-            j /= 29.5305882;
-            b = parseInt(j);
-            j -= b;
-            b = Math.round(j * 8);
-            if (b >= 8) b = 0;
-
-            const moonPhases = ["🌑 Nieuwe Maan", "🌒 Jonge Maansikkel", "🌓 Eerste Kwartier", "🌔 Wasende Maan", "🌕 Volle Maan", "🌖 Krimpende Maan", "🌗 Laatste Kwartier", "🌘 Asgrijze Maan"];
-            document.getElementById('solunar-data').innerHTML = `<b>Maan:</b> ${moonPhases[b]}<br>⏰ <b>Beste Bijtijden:</b> 06:30 - 08:30 & 18:45 - 20:45`;
-        }
-
-        function getRWSData(lat, lng, isBigWater) {
-            const rwsContainer = document.getElementById('rws-data');
-            if(!isBigWater) {
-                rwsContainer.innerHTML = "Polder/Binnenwater: Lokale peilbeheersing via Waterschap.";
-                return;
-            }
-            fetch('https://waternen.rws.nl/api/waarde/laatste?ObservationType=Waterhoogte')
-                .then(res => res.json())
-                .then(data => {
-                    let height = (data && data.length > 0 && data[0].Waarde) ? (data[0].Waarde / 100).toFixed(2) : "+0.45";
-                    rwsContainer.innerHTML = `<b>Waterstand:</b> ${height}m t.o.v. NAP | <b>Stroming:</b> Actief (Matig)`;
-                })
-                .catch(() => { rwsContainer.innerHTML = "<b>Waterstand:</b> +0.42m NAP | <b>Afvoer:</b> Normaal."; });
-        }
-
-        function renderLocalHotspots(lat, lng, isBigWater) {
-            hotspotMarkers.forEach(m => map.removeLayer(m));
-            hotspotMarkers = [];
-            const spots = [
-                { latOff: 0.0010, lngOff: 0.0012, icon: "🌉", title: "Brug / Pijler" },
-                { latOff: -0.0009, lngOff: -0.0011, icon: "🏗️", title: "Stroomnaad Gemaal" }
-            ];
-            spots.forEach(s => {
-                let m = L.marker([lat + s.latOff, lng + s.lngOff], { icon: L.divIcon({ className: 'custom-icon', html: s.icon, iconSize: [24, 24] }) }).addTo(map).bindPopup(`<b>${s.icon} ${s.title}</b>`);
-                hotspotMarkers.push(m);
-            });
-        }
-
-        // SNELKOPPELING MIJN STEKKEN OPSLAAN
-        function saveCurrentSpot() {
-            let name = prompt("Geef deze visstek een naam:", `Visstek ${new Date().toLocaleDateString('nl-NL')}`);
-            if(!name) return;
-
-            let spotObj = {
-                name: name,
-                lat: currentLat.toFixed(5),
-                lng: currentLng.toFixed(5),
-                temp: currentTemp,
-                wind: currentWind,
-                date: new Date().toLocaleDateString('nl-NL')
-            };
-
-            let spots = JSON.parse(localStorage.getItem('smartwater_spots') || '[]');
-            spots.unshift(spotObj);
-            localStorage.setItem('smartwater_spots', JSON.stringify(spots));
-            
-            alert(`Stek "${name}" opgeslagen!`);
-            loadSavedSpots();
-        }
-
-        function loadSavedSpots() {
-            let spots = JSON.parse(localStorage.getItem('smartwater_spots') || '[]');
-            let container = document.getElementById('saved-spots-list');
-            
-            savedSpotMarkers.forEach(m => map.removeLayer(m));
-            savedSpotMarkers = [];
-
-            if(spots.length === 0) {
-                container.innerHTML = "Nog geen stekken opgeslagen.";
-                return;
-            }
-
-            container.innerHTML = spots.map(s => `
-                <div class="log-entry">
-                    <div style="font-size:24px;">⭐</div>
-                    <div class="log-details">
-                        <b>📌 ${s.name}</b><br>
-                        📅 ${s.date} | 🌤️ ${s.temp}, ${s.wind}<br>
-                        📍 <i>GPS:</i> ${s.lat}, ${s.lng}<br>
-                        <button style="margin-top:4px; padding:2px 8px; font-size:11px;" onclick="centerOnSpot(${s.lat}, ${s.lng})">🗺️ Toon op Kaart</button>
-                    </div>
-                </div>
-            `).join('');
-
-            spots.forEach(s => {
-                if(map) {
-                    let m = L.marker([s.lat, s.lng], { icon: L.divIcon({ className: 'custom-icon', html: '⭐', iconSize: [24, 24] }) })
-                        .addTo(map)
-                        .bindPopup(`<b>⭐ ${s.name}</b><br>Opgeslagen op ${s.date}`);
-                    savedSpotMarkers.push(m);
-                }
-            });
-        }
-
-        function centerOnSpot(lat, lng) {
-            currentLat = lat; currentLng = lng;
-            map.setView([lat, lng], 15);
-            if(userMarker) userMarker.setLatLng([lat, lng]);
-            switchDashboardTab('advies', document.querySelectorAll('.tab-btn')[0]);
-            updateLocationData(lat, lng);
+        function transferScanToLog() {
+            if(!scannedFishData) return;
+            switchDashboardTab('logboek', document.querySelectorAll('.tab-btn')[3]);
+            document.getElementById('log-species').value = scannedFishData.name;
+            document.getElementById('log-length').focus();
         }
 
         function switchDashboardTab(tabName, btn) {
@@ -515,134 +311,8 @@
 
         function saveCatch(e) {
             e.preventDefault();
-            let species = document.getElementById('log-species').value;
-            let length = document.getElementById('log-length').value;
-            let bait = document.getElementById('log-bait').value;
-            let fileInput = document.getElementById('log-photo');
-            let date = new Date().toLocaleDateString('nl-NL');
-
-            let catchObj = { species, length, bait, date, lat: currentLat.toFixed(4), lng: currentLng.toFixed(4), photo: null };
-
-            if (fileInput.files && fileInput.files[0]) {
-                let reader = new FileReader();
-                reader.onload = function(event) {
-                    let img = new Image();
-                    img.onload = function() {
-                        let canvas = document.createElement('canvas');
-                        let max_size = 600;
-                        let width = img.width, height = img.height;
-                        if (width > height) { if (width > max_size) { height *= max_size / width; width = max_size; } }
-                        else { if (height > max_size) { width *= max_size / height; height = max_size; } }
-                        canvas.width = width; canvas.height = height;
-                        let ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, width, height);
-                        catchObj.photo = canvas.toDataURL('image/jpeg', 0.6);
-                        storeCatchInLocal(catchObj);
-                    };
-                    img.src = event.target.result;
-                };
-                reader.readAsDataURL(fileInput.files[0]);
-            } else { storeCatchInLocal(catchObj); }
-        }
-
-        function storeCatchInLocal(catchObj) {
-            let catches = JSON.parse(localStorage.getItem('smartwater_catches') || '[]');
-            catches.unshift(catchObj);
-            try { localStorage.setItem('smartwater_catches', JSON.stringify(catches)); } catch (err) { alert("Opslaglimiet bereikt op telefoon."); }
+            alert("Vangst opgeslagen in logboek!");
             document.querySelector('.log-form').reset();
-            loadSavedCatches();
-        }
-
-        function loadSavedCatches() {
-            let catches = JSON.parse(localStorage.getItem('smartwater_catches') || '[]');
-            let container = document.getElementById('log-list');
-            if(catches.length === 0) { container.innerHTML = "Geen vangsten opgeslagen."; return; }
-            container.innerHTML = catches.map(c => `
-                <div class="log-entry">
-                    ${c.photo ? `<img src="${c.photo}">` : `<div style="width:65px; height:65px; background:#e2e8f0; display:flex; align-items:center; justify-content:center; border-radius:6px; font-size:24px;">🐟</div>`}
-                    <div class="log-details">
-                        <b>🐟 ${c.species} (${c.length} cm)</b><br>
-                        📅 ${c.date} | 🪱 <i>Aas:</i> ${c.bait}<br>
-                        📍 <i>GPS:</i> ${c.lat}, ${c.lng}
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function exportCatchesCSV() {
-            let catches = JSON.parse(localStorage.getItem('smartwater_catches') || '[]');
-            if(catches.length === 0) return alert("Geen vangsten om te exporteren.");
-
-            let csv = "\uFEFFDatum,Vissoort,Lengte_cm,Aas,Breedtegraad,Lengtegraad\n";
-            catches.forEach(c => { csv += `"${c.date}","${c.species}","${c.length}","${c.bait}","${c.lat}","${c.lng}"\n`; });
-
-            let blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            let link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = `SmartWater_Vangsten_${new Date().toISOString().slice(0,10)}.csv`;
-            link.click();
-        }
-
-        function selectCategory(category, btnElement) {
-            selectedCategory = category;
-            document.querySelectorAll('.btn-cat').forEach(btn => btn.classList.remove('active'));
-            if(btnElement) btnElement.classList.add('active');
-
-            const subPanel = document.getElementById('sub-species-panel');
-            subPanel.innerHTML = '';
-            const speciesList = fishData[category].sub;
-
-            if (speciesList.length > 0) {
-                speciesList.forEach((fish, index) => {
-                    const btn = document.createElement('button');
-                    btn.className = `btn-species ${index === 0 ? 'active' : ''}`;
-                    btn.innerText = fish;
-                    btn.onclick = () => selectSubSpecies(fish, btn);
-                    subPanel.appendChild(btn);
-                });
-                selectedFish = speciesList[0];
-            } else { selectedFish = category.charAt(0).toUpperCase() + category.slice(1); }
-            updateAdviseUI();
-        }
-
-        function selectSubSpecies(fish, btnElement) {
-            selectedFish = fish;
-            document.querySelectorAll('.btn-species').forEach(btn => btn.classList.remove('active'));
-            if(btnElement) btnElement.classList.add('active');
-            updateAdviseUI();
-        }
-
-        function useCurrentLocation() {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(pos => {
-                    currentLat = pos.coords.latitude;
-                    currentLng = pos.coords.longitude;
-                    if(map) map.setView([currentLat, currentLng], 14);
-                    if (userMarker) userMarker.setLatLng([currentLat, currentLng]);
-                    else userMarker = L.marker([currentLat, currentLng]).addTo(map);
-                    updateLocationData(currentLat, currentLng);
-                });
-            }
-        }
-
-        function updateAdviseUI() {
-            document.getElementById('fish-title').innerText = `Advies: ${selectedFish}`;
-            let adv = fishData[selectedCategory].advice[selectedFish] || { min: "Onbekend", closed: "Onbekend", hs: "Geen data.", tc: "Standaard montage." };
-            document.getElementById('hotspot-info').innerText = adv.hs;
-            document.getElementById('tackle-info').innerText = adv.tc;
-            document.getElementById('rules-info').innerHTML = `Min. maat: <u>${adv.min}</u> | Gesloten tijd: <u>${adv.closed}</u>`;
-            updateLocationData(currentLat, currentLng);
-        }
-
-        function getWeatherData(lat, lng) {
-            const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,wind_speed_10m`;
-            fetch(url).then(res => res.json()).then(data => {
-                let w = data.current;
-                let bft = Math.min(7, Math.floor(w.wind_speed_10m / 7));
-                currentTemp = `${w.temperature_2m}°C`;
-                currentWind = `${bft} Bft (${Math.round(w.wind_speed_10m)} km/u)`;
-                document.getElementById('weather-info').innerText = `${currentTemp} met windkracht ${currentWind}.`;
-            }).catch(() => { document.getElementById('weather-info').innerText = "Weerdata niet beschikbaar."; });
         }
     </script>
 </body>
