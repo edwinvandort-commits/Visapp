@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SmartWater NL - Pro Visplanner & AI Vis-Scan</title>
+    <title>SmartWater NL - Pro Visplanner & Live Advies</title>
     
     <meta name="theme-color" content="#1b2a47">
     <meta name="mobile-web-app-capable" content="yes">
@@ -154,9 +154,10 @@
 
         .tip-box { background: var(--bg-box); padding: 10px 12px; margin-top: 8px; border-left: 5px solid #3498db; border-radius: 6px; font-size: 13px; color: var(--text-main); }
         .tip-box.water-status { border-left-color: #0077b6; }
+        .tip-box.recommendation { border-left-color: #e67e22; background: #fff8f0; }
+        body.dark-mode .tip-box.recommendation { background: #2a1f18; }
         .tip-box.depth-advice { border-left-color: #9b59b6; background: #f3e5f5; }
         body.dark-mode .tip-box.depth-advice { background: #2a1b33; }
-        .tip-box.hotspot { border-left-color: #e67e22; }
         .tip-box.tackle { border-left-color: #27ae60; }
         .tip-box.rules { border-left-color: #e74c3c; }
 
@@ -174,7 +175,7 @@
     <div id="login-screen">
         <div class="login-box">
             <h2>🇳🇱 SmartWater NL</h2>
-            <p style="font-size: 12px; color: #bdc3c7;">Pro Visplanner & AI Vis-Scan</p>
+            <p style="font-size: 12px; color: #bdc3c7;">Pro Visplanner & Live Advies</p>
             <input type="password" id="password-input" placeholder="Wachtwoord...">
             <button id="login-btn">Inloggen</button>
             <p id="login-error">Onjuist wachtwoord.</p>
@@ -221,19 +222,19 @@
                 </h3>
 
                 <div class="tip-box water-status">
-                    <strong>🌊 Visrecht & Wateranalyse:</strong><br>
-                    <span id="water-info">Tik op een water op de kaart om visrechten te analyseren...</span>
+                    <strong>🌊 Wateranalyse & Visrecht:</strong><br>
+                    <span id="water-info">Tik op een water op de kaart...</span>
+                </div>
+
+                <div class="tip-box recommendation">
+                    <strong>💡 Welke Vissoort Nu Targetten? (Weer & Water-advies):</strong><br>
+                    <span id="recommendation-info">Klik op de kaart voor live visadvies op basis van weer en watertype...</span>
                 </div>
 
                 <div class="tip-box depth-advice">
                     <strong>📐 Diepte & Afstand Advies:</strong><br>
                     • <b>Visdiepte:</b> <span id="depth-info">0.5 - 2.5 meter onder de oppervlakte</span><br>
                     • <b>Afstand uit de kant:</b> <span id="distance-info">3 - 15 meter (bij rietkragen & steigers)</span>
-                </div>
-
-                <div class="tip-box hotspot">
-                    <strong>🎯 Hotspots & Structuren:</strong> 
-                    <span id="hotspot-info">Rietkragen, bruggen, duikers, overhangende bomen en taluds.</span>
                 </div>
 
                 <div class="tip-box tackle">
@@ -292,28 +293,30 @@
         let currentLat = 52.1326;
         let currentLng = 5.2913;
         let userMarker = null;
+        let hotspotMarkers = [];
+        let currentSelectedFish = "Snoek";
 
         const speciesData = {
             roofvis: [
-                { name: "Snoek", depth: "0.5 - 2.5 meter", distance: "3 - 15 meter (bij oever/planten)", hotspot: "Rietkragen, bruggen, lelievelden en steigers.", tackle: "Shads (12-20cm), jerkbaits, spinnerbaits of dode voorn.", min: "45 cm", closed: "1 mrt t/m laatste za april" },
-                { name: "Snoekbaars", depth: "3.0 - 8.0 meter (Bodem)", distance: "10 - 40 meter (Taluds en vaargeulen)", hotspot: "Steile taluds, harde zand/grindbodems, brugpijlers.", tackle: "Jiggen met shads (8-12cm), dropshot, kleine doodaasvisjes.", min: "42 cm", closed: "1 mrt t/m laatste za mei" },
-                { name: "Baars", depth: "1.0 - 4.0 meter", distance: "2 - 20 meter (Oeverstructuren & kades)", hotspot: "Damwanden, houten paaltjes, bruggen, steenstort.", tackle: "Kleine spinners, twitchbaits, dropshot met worms of shads.", min: "22 cm", closed: "1 apr t/m laatste za mei" },
-                { name: "Meerval", depth: "2.0 - 10.0 meter", distance: "15 - 50 meter (Diepe gaten)", hotspot: "Diepe kolken, stroomversnellingen bij kribben, luwtes.", tackle: "Grote trossen pieren, grote meervalshads, stroomopwaarts vissen.", min: "Geen (Terugzetplicht)", closed: "Geen" }
+                { name: "Snoek", depth: "0.5 - 2.5 meter", distance: "3 - 15 meter (bij oever/planten)", tackle: "Shads (12-20cm), jerkbaits, spinnerbaits of dode voorn.", min: "45 cm", closed: "1 mrt t/m laatste za april" },
+                { name: "Snoekbaars", depth: "3.0 - 8.0 meter (Bodem)", distance: "10 - 40 meter (Taluds en vaargeulen)", tackle: "Jiggen met shads (8-12cm), dropshot, kleine doodaasvisjes.", min: "42 cm", closed: "1 mrt t/m laatste za mei" },
+                { name: "Baars", depth: "1.0 - 4.0 meter", distance: "2 - 20 meter (Oeverstructuren & kades)", tackle: "Kleine spinners, twitchbaits, dropshot met worms of shads.", min: "22 cm", closed: "1 apr t/m laatste za mei" },
+                { name: "Meerval", depth: "2.0 - 10.0 meter", distance: "15 - 50 meter (Diepe gaten)", tackle: "Grote trossen pieren, grote meervalshads, stroomopwaarts vissen.", min: "Geen (Terugzetplicht)", closed: "Geen" }
             ],
             witvis: [
-                { name: "Brasem", depth: "Bodem (2.0 - 6.0 meter)", distance: "15 - 40 meter (Feederafstand)", hotspot: "Platte zandbodems, luwtes van havens en kanalen.", tackle: "Feederhengel, korf met voer, maden, casters, maïs en pier.", min: "Geen", closed: "Geen" },
-                { name: "Voorn", depth: "1.0 - 3.0 meter (Halfwater / Bodem)", distance: "5 - 15 meter (Vaste stok)", hotspot: "Mooie rietkanten, stadsgrachten, rustig stromend water.", tackle: "Vaste stok, licht dobbertje, enkele maai of brooddeeg.", min: "Geen", closed: "Geen" },
-                { name: "Zeelt", depth: "0.5 - 2.0 meter (Bodem)", distance: "2 - 10 meter (Dicht bij waterplanten)", hotspot: "Dikke lelievelden, zachte modderbodems, rietbochten.", tackle: "Matchhengel met dobber, maïs, pier, zachte mini-boilies.", min: "Geen", closed: "Geen" }
+                { name: "Brasem", depth: "Bodem (2.0 - 6.0 meter)", distance: "15 - 40 meter (Feederafstand)", tackle: "Feederhengel, korf met voer, maden, casters, maïs en pier.", min: "Geen", closed: "Geen" },
+                { name: "Voorn", depth: "1.0 - 3.0 meter (Halfwater / Bodem)", distance: "5 - 15 meter (Vaste stok)", tackle: "Vaste stok, licht dobbertje, enkele maai of brooddeeg.", min: "Geen", closed: "Geen" },
+                { name: "Zeelt", depth: "0.5 - 2.0 meter (Bodem)", distance: "2 - 10 meter (Dicht bij waterplanten)", tackle: "Matchhengel met dobber, maïs, pier, zachte mini-boilies.", min: "Geen", closed: "Geen" }
             ],
             karper: [
-                { name: "Spiegel/Schubkarper", depth: "1.0 - 4.0 meter (Bodem)", distance: "10 - 50 meter (Hardere platen/Schone stekken)", hotspot: "Taluds, schone zandplaten tussen planten, overhangende takken.", tackle: "Self-hook rigs, boilies, tijgernoten, pop-ups op een voerplek.", min: "Geen", closed: "Geen" },
-                { name: "Graskarper", depth: "0.2 - 1.5 meter (Oppervlakte / Ondiep)", distance: "5 - 20 meter", hotspot: "Ondiepe baaien, dichte plantenbedden, zonnige stekken.", tackle: "Korst brood aan de oppervlakte, maïs op de bodem.", min: "Geen", closed: "Geen" }
+                { name: "Spiegel/Schubkarper", depth: "1.0 - 4.0 meter (Bodem)", distance: "10 - 50 meter (Hardere platen/Schone stekken)", tackle: "Self-hook rigs, boilies, tijgernoten, pop-ups op een voerplek.", min: "Geen", closed: "Geen" },
+                { name: "Graskarper", depth: "0.2 - 1.5 meter (Oppervlakte / Ondiep)", distance: "5 - 20 meter", tackle: "Korst brood aan de oppervlakte, maïs op de bodem.", min: "Geen", closed: "Geen" }
             ],
             forel: [
-                { name: "Regenboogforel", depth: "0.5 - 2.5 meter", distance: "10 - 30 meter", hotspot: "Stromend water, beluchters, diepe hoeken van visvijvers.", tackle: "PowerBait, lepel/spinner, wasmotten onder een spiroline.", min: "Geen", closed: "Geen" }
+                { name: "Regenboogforel", depth: "0.5 - 2.5 meter", distance: "10 - 30 meter", tackle: "PowerBait, lepel/spinner, wasmotten onder een spiroline.", min: "Geen", closed: "Geen" }
             ],
             paling: [
-                { name: "Paling", depth: "Bodem (1.5 - 6.0 meter)", distance: "5 - 25 meter", hotspot: "Steenstort, beschoeiingen, donkere gaten, bruggen.", tackle: "⚠️ NVT: Paling heeft in NL een algehele meeneem- en vangstbeperking.", min: "BESCHERMD", closed: "Het hele jaar beschermd" }
+                { name: "Paling", depth: "Bodem (1.5 - 6.0 meter)", distance: "5 - 25 meter", tackle: "⚠️ NVT: Paling heeft in NL een algehele meeneem- en vangstbeperking.", min: "BESCHERMD", closed: "Het hele jaar beschermd" }
             ]
         };
 
@@ -363,7 +366,7 @@
                     zoomControl: true,
                     tap: true,
                     layers: [osmLayer]
-                }).setView([currentLat, currentLng], 10);
+                }).setView([currentLat, currentLng], 12);
 
                 const baseMaps = {
                     "🗺️ Standaard Kaart": osmLayer,
@@ -376,7 +379,6 @@
 
                 L.control.layers(baseMaps, overlayMaps, { position: 'topright' }).addTo(map);
 
-                // Klik op kaart -> Analyseer water op de gekozen coördinaten
                 map.on('click', function(e) { 
                     currentLat = e.latlng.lat; 
                     currentLng = e.latlng.lng;
@@ -387,44 +389,133 @@
                         userMarker = L.marker([currentLat, currentLng]).addTo(map);
                     }
                     
-                    analyzeWaterRights(currentLat, currentLng);
+                    analyzeWaterAndWeather(currentLat, currentLng);
+                    loadHotspotMarkers(currentLat, currentLng, currentSelectedFish);
                 });
             }
             
             map.invalidateSize();
         }
 
-        // Live Water & Visrecht Analyse via OpenStreetMap Overpass API
-        function analyzeWaterRights(lat, lng) {
-            const infoBox = document.getElementById('water-info');
-            infoBox.innerHTML = `⏳ Watergegevens ophalen voor (${lat.toFixed(4)}, ${lng.toFixed(4)})...`;
+        // 1. Zoek Fysieke Hotspots op de Kaart per Vissoort
+        function loadHotspotMarkers(lat, lng, fish) {
+            hotspotMarkers.forEach(m => map.removeLayer(m));
+            hotspotMarkers = [];
 
-            const radius = 50; // meter rondom klikpunt
-            const query = `[out:json];(way(around:${radius},${lat},${lng})["waterway"];relation(around:${radius},${lat},${lng})["natural"="water"];);out tags;`;
+            // Query voor fysieke structuren binnen 500m
+            const query = `[out:json][timeout:10];
+                (
+                  way["bridge"](around:500,${lat},${lng});
+                  node["waterway"="weir"](around:500,${lat},${lng});
+                  node["waterway"="lock_gate"](around:500,${lat},${lng});
+                  way["mooring"](around:500,${lat},${lng});
+                );
+                out center 8;`;
 
             fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`)
                 .then(res => res.json())
                 .then(data => {
                     if (data.elements && data.elements.length > 0) {
-                        const tags = data.elements[0].tags || {};
-                        const waterName = tags.name || tags.waterway || "Gedetecteerd binnenwater";
-                        const type = tags.waterway || tags.water || "Watergang";
+                        data.elements.forEach(el => {
+                            let hLat = el.center ? el.center.lat : el.lat;
+                            let hLng = el.center ? el.center.lon : el.lon;
 
-                        let vispasStatus = "📘 **Landelijke VISpas:** Vissen over het algemeen toegestaan (Grote wateren / Kanalen).";
-                        if (type === "canal" || type === "river") {
-                            vispasStatus = "📘 **Landelijke VISpas:** Vissen toegestaan in hoofdvaarweg / kanaal.";
-                        } else if (type === "ditch" || type === "stream") {
-                            vispasStatus = "📙 **Polderwater / Sloot:** Mogelijk verenigingswater van lokale hengelsportvereniging.";
-                        }
+                            if (hLat && hLng) {
+                                let tags = el.tags || {};
+                                let spotTitle = "🎯 Hotspot Zone";
+                                let tip = `Goede schuillocatie voor ${fish}.`;
 
-                        infoBox.innerHTML = `<b>📍 ${waterName}</b> (${type})<br>${vispasStatus}<br><small style="color:#7f8c8d;">Coördinaten: ${lat.toFixed(4)}, ${lng.toFixed(4)}</small>`;
-                    } else {
-                        infoBox.innerHTML = `<b>📍 Gekozen locatie:</b> ${lat.toFixed(4)}, ${lng.toFixed(4)}<br>📘 **VISpas Advies:** Controleer of dit water is opgenomen in de Gezamenlijke Lijst van Nederlandse Viswateren.`;
+                                if (tags.bridge) {
+                                    spotTitle = "🌉 Brug / Schaduwzone";
+                                    tip = (fish === "Snoekbaars" || fish === "Snoek") ? `Roofvissen liggen graag onder de schaduwrand van deze brug te wachten!` : `Vis strak tegen de brugpijlers.`;
+                                } else if (tags.waterway === 'weir' || tags.waterway === 'lock_gate') {
+                                    spotTitle = "🌊 Stuw / Sluis (Stroming)";
+                                    tip = `Zuurstofrijk water! Ideaal voor roofvis en winde op zoek naar aasvis.`;
+                                } else if (tags.mooring) {
+                                    spotTitle = "⚓ Steiger / Aanlegplaats";
+                                    tip = `Topstek voor Baars en Voorn tussen en onder de steigers.`;
+                                }
+
+                                const marker = L.circleMarker([hLat, hLng], {
+                                    radius: 9,
+                                    fillColor: "#e67e22",
+                                    color: "#ffffff",
+                                    weight: 2,
+                                    opacity: 1,
+                                    fillOpacity: 0.9
+                                }).addTo(map);
+
+                                marker.bindPopup(`<b>${spotTitle}</b><br>${tip}`);
+                                hotspotMarkers.push(marker);
+                            }
+                        });
                     }
                 })
-                .catch(() => {
-                    infoBox.innerHTML = `<b>📍 Gekozen locatie:</b> ${lat.toFixed(4)}, ${lng.toFixed(4)}<br>📘 **VISpas Advies:** Landelijke of regionale VISpas vereist.`;
-                });
+                .catch(() => {});
+        }
+
+        // 2. Gecombineerd Water- en Weeradvies bij Klik op Water
+        function analyzeWaterAndWeather(lat, lng) {
+            const infoBox = document.getElementById('water-info');
+            const recBox = document.getElementById('recommendation-info');
+            
+            infoBox.innerHTML = `⏳ Water & Weer analyseren...`;
+            recBox.innerHTML = `⏳ Bepalen wat nu het beste bijt...`;
+
+            // Ophalen Water-data & Live Weer-data parallel
+            const waterQuery = `[out:json];(way(around:60,${lat},${lng})["waterway"];relation(around:60,${lat},${lng})["natural"="water"];);out tags;`;
+            const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,wind_speed_10m,surface_pressure`;
+
+            Promise.all([
+                fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(waterQuery)}`).then(r => r.json()),
+                fetch(weatherUrl).then(r => r.json())
+            ]).then(([waterData, weatherData]) => {
+                
+                // --- Wateranalyse ---
+                let waterName = "Gedetecteerd Binnenwater";
+                let waterType = "polder/sloot";
+
+                if (waterData.elements && waterData.elements.length > 0) {
+                    const tags = waterData.elements[0].tags || {};
+                    waterName = tags.name || tags.waterway || "Binnenwater";
+                    waterType = tags.waterway || tags.water || "kanaal";
+                }
+
+                let vispasStatus = (waterType === "canal" || waterType === "river") 
+                    ? "📘 **Landelijke VISpas:** Grote vaarweg/kanaal."
+                    : "📙 **Verenigingswater:** Waarschijnlijk HSV vergunning vereist.";
+
+                infoBox.innerHTML = `<b>📍 ${waterName}</b> (${waterType})<br>${vispasStatus}`;
+
+                // --- Live Weer & Vistype Advies ---
+                const temp = weatherData.current.temperature_2m;
+                const wind = Math.round(weatherData.current.wind_speed_10m);
+                const pressure = Math.round(weatherData.current.surface_pressure);
+
+                let advice = "";
+
+                if (temp < 10) {
+                    if (waterType === "river" || waterType === "canal") {
+                        advice = `🌡️ <b>Koud weer (${temp}°C) op diep water:</b> Target vandaag <b>Snoekbaars</b> of <b>Brasem</b> op de diepste stukken / vaargeulen. Vis heel langzaam!`;
+                    } else {
+                        advice = `🌡️ <b>Koud weer (${temp}°C) op polder/vijver:</b> <b>Snoek</b> is nu actief met doodaas bij bruggen en diepere kommen.`;
+                    }
+                } else if (temp >= 10 && temp <= 22) {
+                    if (wind > 20) {
+                        advice = `💨 <b>Stevige wind (${wind} km/u) & ${temp}°C:</b> Aan de lagerwal (waar de wind naartoe waait) verzamelt zich aasvis. Perfect voor <b>Roofblei</b>, <b>Snoek</b> of een actieve <b>Feeder-sessie op Brasem</b>!`;
+                    } else {
+                        advice = `🌤️ <b>Uitstekende condities (${temp}°C, ${pressure} hPa):</b> **Karper** en **Baars** zijn erg actief! Probeer karper op ondiepe platen of baars rond structuren.`;
+                    }
+                } else {
+                    advice = `☀️ <b>Warm weer (${temp}°C):</b> Vissen zoeken zuurstof. Focussen op <b>Stroomversnellingen/Stuwen</b> of vissen aan de oppervlakte op <b>Karper / Graskarper</b> met broodkorst.`;
+                }
+
+                recBox.innerHTML = `${advice}<br><small style="color:#7f8c8d;">Actueel weer: ${temp}°C | Wind: ${wind} km/u | Luchtdruk: ${pressure} hPa</small>`;
+
+            }).catch(() => {
+                infoBox.innerHTML = `📍 Gekozen locatie: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+                recBox.innerHTML = `Visadvies momenteel niet beschikbaar. Probeer nogmaals te klikken.`;
+            });
         }
 
         function searchLocation() {
@@ -448,14 +539,13 @@
                             userMarker = L.marker([lat, lon]).addTo(map);
                         }
 
-                        analyzeWaterRights(lat, lon);
+                        analyzeWaterAndWeather(lat, lon);
+                        loadHotspotMarkers(lat, lon, currentSelectedFish);
                     } else {
                         alert("Locatie niet gevonden. Probeer een andere plaatsnaam of kanaal.");
                     }
                 })
-                .catch(() => {
-                    alert("Er is een fout opgetreden bij het zoeken.");
-                });
+                .catch(() => { alert("Er is een fout opgetreden bij het zoeken."); });
         }
 
         function selectCategory(catKey, btn) {
@@ -473,13 +563,17 @@
                 sBtn.onclick = function() {
                     document.querySelectorAll('.btn-species').forEach(b => b.classList.remove('active'));
                     sBtn.classList.add('active');
+                    currentSelectedFish = fish.name;
                     updateFishAdvice(fish);
+                    loadHotspotMarkers(currentLat, currentLng, currentSelectedFish);
                 };
                 speciesPanel.appendChild(sBtn);
             });
 
             if (list.length > 0) {
+                currentSelectedFish = list[0].name;
                 updateFishAdvice(list[0]);
+                if(map) loadHotspotMarkers(currentLat, currentLng, currentSelectedFish);
             }
         }
 
@@ -487,7 +581,6 @@
             document.getElementById('fish-title').innerText = `Advies: ${fish.name}`;
             document.getElementById('depth-info').innerText = fish.depth;
             document.getElementById('distance-info').innerText = fish.distance;
-            document.getElementById('hotspot-info').innerText = fish.hotspot;
             document.getElementById('tackle-info').innerText = fish.tackle;
             document.getElementById('rules-info').innerText = `Min. maat: ${fish.min} | Gesloten tijd: ${fish.closed}`;
         }
@@ -506,7 +599,8 @@
                             userMarker = L.marker([currentLat, currentLng]).addTo(map);
                         }
                     }
-                    analyzeWaterRights(currentLat, currentLng);
+                    analyzeWaterAndWeather(currentLat, currentLng);
+                    loadHotspotMarkers(currentLat, currentLng, currentSelectedFish);
                 });
             }
         }
