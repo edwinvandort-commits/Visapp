@@ -192,10 +192,10 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <script>
-        // PWA Service Worker Inline Registratie
-        if ('serviceWorker' in navigator) {
+        // PWA Service Worker Registration
+        if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
             const swCode = `
-                const CACHE_NAME = 'smartwater-v2';
+                const CACHE_NAME = 'smartwater-v3';
                 self.addEventListener('install', e => {
                     e.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(['./'])));
                 });
@@ -239,7 +239,7 @@
             if (document.getElementById('password-input').value === "roofvis2026") {
                 document.getElementById('login-screen').style.display = 'none';
                 document.getElementById('main-app').style.display = 'flex';
-                setTimeout(() => { initMap(); useCurrentLocation(); }, 100);
+                setTimeout(() => { initMap(); useCurrentLocation(); }, 200);
             } else {
                 document.getElementById('login-error').style.display = 'block';
             }
@@ -268,7 +268,7 @@
                 addBoatRamps();
                 addTackleShops();
             }
-            map.invalidateSize();
+            setTimeout(() => { map.invalidateSize(); }, 300);
         }
 
         function addBoatRamps() {
@@ -314,7 +314,7 @@
         function searchLocation() {
             let q = document.getElementById('search-input').value;
             if(!q) return;
-            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}`)
+            fetch(`https://nominatim.openstreetmap.org/search?format=json&countrycodes=nl&q=${encodeURIComponent(q)}`)
                 .then(res => res.json())
                 .then(data => {
                     if(data.length > 0) {
@@ -324,7 +324,7 @@
                         if(userMarker) userMarker.setLatLng([currentLat, currentLng]);
                         else userMarker = L.marker([currentLat, currentLng]).addTo(map);
                         updateLocationData(currentLat, currentLng);
-                    } else alert("Locatie niet gevonden.");
+                    } else alert("Locatie niet gevonden in Nederland.");
                 });
         }
 
@@ -349,14 +349,12 @@
             renderLocalHotspots(lat, lng, isBigWater);
         }
 
-        // Live Solunar Calculator (Maanstand & Bijtijden)
         function calculateSolunarData() {
             let date = new Date();
             let year = date.getFullYear();
             let month = date.getMonth() + 1;
             let day = date.getDate();
 
-            // Eenvoudige Moon Phase berekening
             let c = e = j = b = 0;
             if (month < 3) { year--; month += 12; }
             month++;
@@ -372,7 +370,6 @@
             const moonPhases = ["🌑 Nieuwe Maan", "🌒 Jonge Maansikkel", "🌓 Eerste Kwartier", "🌔 Wasende Maan", "🌕 Volle Maan", "🌖 Krimpende Maan", "🌗 Laatste Kwartier", "🌘 Asgrijze Maan"];
             let currentPhase = moonPhases[b];
 
-            // Piekbijtijden schatting op basis van maanstand
             let major1 = "06:30 - 08:30";
             let major2 = "18:45 - 20:45";
             if (b === 0 || b === 4) {
@@ -382,7 +379,6 @@
             }
         }
 
-        // Live Rijkswaterstaat Waterstand & Afvoer API
         function getRWSData(lat, lng, isBigWater) {
             const rwsContainer = document.getElementById('rws-data');
             rwsContainer.innerHTML = "Rijkswaterstaat data laden...";
@@ -433,6 +429,7 @@
             document.getElementById(`tab-${tabName}`).classList.add('active');
         }
 
+        // GEOPTIMALISEERDE LOGBOEK OPSLAG MET AUTOMATISCHE FOTO-COMPRESSIE
         function saveCatch(e) {
             e.preventDefault();
             let species = document.getElementById('log-species').value;
@@ -445,9 +442,26 @@
 
             if (fileInput.files && fileInput.files[0]) {
                 let reader = new FileReader();
-                reader.onload = function(e) {
-                    catchObj.photo = e.target.result;
-                    storeCatchInLocal(catchObj);
+                reader.onload = function(event) {
+                    let img = new Image();
+                    img.onload = function() {
+                        let canvas = document.createElement('canvas');
+                        let max_size = 600; // Verklein foto naar max 600px voor geheugenbesparing
+                        let width = img.width;
+                        let height = img.height;
+                        if (width > height) {
+                            if (width > max_size) { height *= max_size / width; width = max_size; }
+                        } else {
+                            if (height > max_size) { width *= max_size / height; height = max_size; }
+                        }
+                        canvas.width = width;
+                        canvas.height = height;
+                        let ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        catchObj.photo = canvas.toDataURL('image/jpeg', 0.6); // Gecomprimeerd opslaan
+                        storeCatchInLocal(catchObj);
+                    };
+                    img.src = event.target.result;
                 };
                 reader.readAsDataURL(fileInput.files[0]);
             } else {
@@ -461,7 +475,7 @@
             try {
                 localStorage.setItem('smartwater_catches', JSON.stringify(catches));
             } catch (err) {
-                alert("Opslaglimiet bereikt op telefoon. Foto kon niet bewaard worden.");
+                alert("Opslaglimiet bereikt op telefoon. Verwijder oude vangsten of upload zonder foto.");
             }
             document.querySelector('.log-form').reset();
             loadSavedCatches();
@@ -486,16 +500,17 @@
             `).join('');
         }
 
+        // CSV EXPORT INCLUSIEF UTF-8 BOM VOOR DIRECTE OPENING IN EXCEL
         function exportCatchesCSV() {
             let catches = JSON.parse(localStorage.getItem('smartwater_catches') || '[]');
             if(catches.length === 0) return alert("Geen vangsten om te exporteren.");
 
-            let csv = "Datum,Vissoort,Lengte_cm,Aas,Breedtegraad,Lengtegraad\n";
+            let csv = "\uFEFFDatum,Vissoort,Lengte_cm,Aas,Breedtegraad,Lengtegraad\n";
             catches.forEach(c => {
                 csv += `"${c.date}","${c.species}","${c.length}","${c.bait}","${c.lat}","${c.lng}"\n`;
             });
 
-            let blob = new Blob([csv], { type: 'text/csv' });
+            let blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             let link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
             link.download = `SmartWater_Vangsten_${new Date().toISOString().slice(0,10)}.csv`;
