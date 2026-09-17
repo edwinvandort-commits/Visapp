@@ -115,17 +115,17 @@
         .search-bar button { background: #3498db; color: white; border: none; padding: 8px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; }
 
         .category-buttons { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
-        .btn-cat { flex: 1; min-width: 60px; padding: 8px 4px; font-size: 13px; font-weight: bold; border: 2px solid #2c3e50; border-radius: 6px; background: #2c3e50; color: #ecf0f1; cursor: pointer; }
+        .btn-cat { flex: 1; min-width: 60px; padding: 8px 4px; font-size: 12px; font-weight: bold; border: 2px solid #2c3e50; border-radius: 6px; background: #2c3e50; color: #ecf0f1; cursor: pointer; }
         .btn-cat.active { background: #3498db; border-color: #2980b9; color: white; }
         
-        .species-buttons { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin-top: 8px; }
+        .species-buttons { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin-top: 8px; min-height: 30px; }
         .btn-species { background: #0f172a; border: 1px solid #3498db; color: #ecf0f1; padding: 6px 10px; font-size: 12px; font-weight: bold; border-radius: 6px; cursor: pointer; }
         .btn-species.active { background: #e67e22; border-color: #d35400; color: white; }
 
         #map { 
             flex: 1 1 auto; 
             width: 100%; 
-            min-height: 250px; 
+            min-height: 220px; 
             z-index: 1; 
             cursor: crosshair !important; 
         }
@@ -133,7 +133,7 @@
         #dashboard { 
             padding: 15px; 
             background: var(--bg-card); 
-            max-height: 45%; 
+            max-height: 50%; 
             overflow-y: auto; 
             border-top-left-radius: 16px; 
             border-top-right-radius: 16px; 
@@ -154,9 +154,11 @@
 
         .tip-box { background: var(--bg-box); padding: 10px 12px; margin-top: 8px; border-left: 5px solid #3498db; border-radius: 6px; font-size: 13px; color: var(--text-main); }
         .tip-box.water-status { border-left-color: #0077b6; }
+        .tip-box.depth-advice { border-left-color: #9b59b6; background: #f3e5f5; }
+        body.dark-mode .tip-box.depth-advice { background: #2a1b33; }
         .tip-box.hotspot { border-left-color: #e67e22; }
         .tip-box.tackle { border-left-color: #27ae60; }
-        .tip-box.rules { border-left-color: #8e44ad; }
+        .tip-box.rules { border-left-color: #e74c3c; }
         
         .visplanner-btn { display: inline-block; margin-top: 6px; background: #27ae60; color: white; text-decoration: none; padding: 6px 12px; border-radius: 4px; font-weight: bold; font-size: 12px; }
 
@@ -189,7 +191,7 @@
             </div>
 
             <div class="search-bar">
-                <input type="text" id="search-input" placeholder="Zoek stad, kanaal of waternaam...">
+                <input type="text" id="search-input" placeholder="Zoek stad, kanaal of waternaam..." onkeypress="if(event.key==='Enter') searchLocation()">
                 <button onclick="searchLocation()">🔍 Zoek</button>
             </div>
 
@@ -226,19 +228,25 @@
                     <a id="visplanner-link" href="https://www.visplanner.nl" target="_blank" class="visplanner-btn">📲 Open in Visplanner.nl</a>
                 </div>
 
+                <div class="tip-box depth-advice">
+                    <strong>📐 Diepte & Afstand Advies:</strong><br>
+                    • <b>Visdiepte:</b> <span id="depth-info">0.5 - 2.5 meter onder de oppervlakte</span><br>
+                    • <b>Afstand uit de kant:</b> <span id="distance-info">3 - 15 meter (bij rietkragen & steigers)</span>
+                </div>
+
                 <div class="tip-box hotspot">
-                    <strong>🎯 Hotspots:</strong> 
-                    <span id="hotspot-info">Zoek naar rietkragen, brugpijlers en taluds.</span>
+                    <strong>🎯 Hotspots & Structuren:</strong> 
+                    <span id="hotspot-info">Rietkragen, bruggen, duikers, overhangende bomen en taluds.</span>
                 </div>
 
                 <div class="tip-box tackle">
-                    <strong>🪱 Beste Aas:</strong> 
-                    <span id="tackle-info">Shads, jerkbaits of dode voorn.</span>
+                    <strong>🪱 Beste Aas & Techniek:</strong> 
+                    <span id="tackle-info">Shads, jerkbaits, spinnerbaits of een takel met een dode voorn.</span>
                 </div>
 
                 <div class="tip-box rules">
-                    <strong>⚖️ Minimummaat:</strong> 
-                    <span id="rules-info">45 cm | Gesloten tijd: 1 mrt t/m laatste za april</span>
+                    <strong>⚖️ Wetgeving & Regels:</strong> 
+                    <span id="rules-info">Min. maat: 45 cm | Gesloten tijd: 1 maart t/m laatste zaterdag april.</span>
                 </div>
             </div>
 
@@ -288,6 +296,31 @@
         let currentLng = 5.2913;
         let userMarker = null;
 
+        // Uitgebreide Database met Advies per Vissoort
+        const speciesData = {
+            roofvis: [
+                { name: "Snoek", depth: "0.5 - 2.5 meter", distance: "3 - 15 meter (bij oever/planten)", hotspot: "Rietkragen, bruggen, lelievelden en steigers.", tackle: "Shads (12-20cm), jerkbaits, spinnerbaits of dode voorn.", min: "45 cm", closed: "1 mrt t/m laatste za april" },
+                { name: "Snoekbaars", depth: "3.0 - 8.0 meter (Bodem)", distance: "10 - 40 meter (Taluds en vaargeulen)", hotspot: "Steile taluds, harde zand/grindbodems, brugpijlers.", tackle: "Jiggen met shads (8-12cm), dropshot, kleine doodaasvisjes.", min: "42 cm", closed: "1 mrt t/m laatste za mei" },
+                { name: "Baars", depth: "1.0 - 4.0 meter", distance: "2 - 20 meter (Oeverstructuren & kades)", hotspot: "Damwanden, houten paaltjes, bruggen, steenstort.", tackle: "Kleine spinners, twitchbaits, dropshot met worms of shads.", min: "22 cm", closed: "1 apr t/m laatste za mei" },
+                { name: "Meerval", depth: "2.0 - 10.0 meter", distance: "15 - 50 meter (Diepe gaten)", hotspot: "Diepe kolken, stroomversnellingen bij kribben, luwtes.", tackle: "Grote trossen pieren, grote meervalshads, stroomopwaarts vissen.", min: "Geen (Terugzetplicht)", closed: "Geen" }
+            ],
+            witvis: [
+                { name: "Brasem", depth: "Bodem (2.0 - 6.0 meter)", distance: "15 - 40 meter (Feederafstand)", hotspot: "Platte zandbodems, luwtes van havens en kanalen.", tackle: "Feederhengel, korf met voer, maden, casters, maïs en pier.", min: "Geen", closed: "Geen" },
+                { name: "Voorn", depth: "1.0 - 3.0 meter (Halfwater / Bodem)", distance: "5 - 15 meter (Vaste stok)", hotspot: "Mooie rietkanten, stadsgrachten, rustig stromend water.", tackle: "Vaste stok, licht dobbertje, enkele maai of brooddeeg.", min: "Geen", closed: "Geen" },
+                { name: "Zeelt", depth: "0.5 - 2.0 meter (Bodem)", distance: "2 - 10 meter (Dicht bij waterplanten)", hotspot: "Dikke lelievelden, zachte modderbodems, rietbochten.", tackle: "Matchhengel met dobber, maïs, pier, zachte mini-boilies.", min: "Geen", closed: "Geen" }
+            ],
+            karper: [
+                { name: "Spiegel/Schubkarper", depth: "1.0 - 4.0 meter (Bodem)", distance: "10 - 50 meter (Hardere platen/Schone stekken)", hotspot: "Taluds, schone zandplaten tussen planten, overhangende takken.", tackle: "Self-hook rigs, boilies, tijgernoten, pop-ups op een voerplek.", min: "Geen", closed: "Geen" },
+                { name: "Graskarper", depth: "0.2 - 1.5 meter (Oppervlakte / Ondiep)", distance: "5 - 20 meter", hotspot: "Ondiepe baaien, dichte plantenbedden, zonnige stekken.", tackle: "Korst brood aan de oppervlakte, maïs op de bodem.", min: "Geen", closed: "Geen" }
+            ],
+            forel: [
+                { name: "Regenboogforel", depth: "0.5 - 2.5 meter", distance: "10 - 30 meter", hotspot: "Stromend water, beluchters, diepe hoeken van visvijvers.", tackle: "PowerBait, lepel/spinner, wasmotten onder een spiroline.", min: "Geen", closed: "Geen" }
+            ],
+            paling: [
+                { name: "Paling", depth: "Bodem (1.5 - 6.0 meter)", distance: "5 - 25 meter", hotspot: "Steenstort, beschoeiingen, donkere gaten, bruggen.", tackle: "⚠️ NVT: Paling heeft in NL een algehele meeneem- en vangstbeperking.", min: "BESCHERMD", closed: "Het hele jaar beschermd" }
+            ]
+        };
+
         const fishDatabase = [
             { name: "Snoek", min: "45 cm", closed: "1 maart t/m laatste zaterdag april", tip: "Langgerekt lichaam met luipaardpatroon en scherpe tanden." },
             { name: "Snoekbaars", min: "42 cm", closed: "1 maart t/m laatste zaterdag mei", tip: "Glazige ogen en twee duidelijke rugvinnen." },
@@ -304,12 +337,12 @@
         function checkPassword() {
             if (document.getElementById('password-input').value === "roofvis2026") {
                 document.getElementById('login-screen').style.display = 'none';
-                
                 const mainApp = document.getElementById('main-app');
                 mainApp.style.display = 'flex';
                 
                 setTimeout(() => { 
                     initMap(); 
+                    selectCategory('roofvis', document.querySelector('.btn-cat'));
                 }, 250);
             } else {
                 document.getElementById('login-error').style.display = 'block';
@@ -318,7 +351,6 @@
 
         function initMap() {
             if (!map) {
-                // 1. Maak de twee kaartlagen aan
                 const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
                     attribution: '© OpenStreetMap' 
                 });
@@ -327,21 +359,28 @@
                     attribution: 'Tiles &copy; Esri'
                 });
 
-                // 2. Start de kaart met OpenStreetMap
+                // Waterdieptes & Bodemstructuur via OpenSeaMap
+                const seaMapLayer = L.tileLayer('https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png', {
+                    attribution: 'Map data &copy; OpenSeaMap contributors'
+                });
+
                 map = L.map('map', { 
                     zoomControl: true,
                     tap: true,
                     layers: [osmLayer]
                 }).setView([currentLat, currentLng], 10);
 
-                // 3. Voeg de laag-schakelaar toe rechtsboven op de kaart
                 const baseMaps = {
-                    "🗺️ Standaard": osmLayer,
-                    "🛰️ Satelliet": satelliteLayer
+                    "🗺️ Standaard Kaart": osmLayer,
+                    "🛰️ Satellietkaart": satelliteLayer
                 };
-                L.control.layers(baseMaps, null, { position: 'topright' }).addTo(map);
 
-                // 4. Klik-event op de kaart
+                const overlayMaps = {
+                    "🌊 Diepte & Waterwegen (OpenSeaMap)": seaMapLayer
+                };
+
+                L.control.layers(baseMaps, overlayMaps, { position: 'topright' }).addTo(map);
+
                 map.on('click', function(e) { 
                     currentLat = e.latlng.lat; 
                     currentLng = e.latlng.lng;
@@ -364,6 +403,74 @@
             map.invalidateSize();
         }
 
+        // Plaats Zoekfunctie (Nominatim API)
+        function searchLocation() {
+            const query = document.getElementById('search-input').value;
+            if (!query) return;
+
+            fetch(`https://nominatim.openstreetmap.org/search?format=json&countrycodes=nl&q=${encodeURIComponent(query)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data && data.length > 0) {
+                        const lat = parseFloat(data[0].lat);
+                        const lon = parseFloat(data[0].lon);
+                        currentLat = lat;
+                        currentLng = lon;
+
+                        map.setView([lat, lon], 13);
+
+                        if (userMarker) {
+                            userMarker.setLatLng([lat, lon]);
+                        } else {
+                            userMarker = L.marker([lat, lon]).addTo(map);
+                        }
+
+                        document.getElementById('water-info').innerText = `Gevonden: ${data[0].display_name.split(',')[0]} (${lat.toFixed(4)}, ${lon.toFixed(4)})`;
+                        document.getElementById('visplanner-link').href = `https://www.visplanner.nl/?lat=${lat}&lng=${lon}`;
+                    } else {
+                        alert("Locatie niet gevonden. Probeer een andere plaatsnaam of kanaal.");
+                    }
+                })
+                .catch(err => {
+                    alert("Er is een fout opgetreden bij het zoeken.");
+                });
+        }
+
+        // Categorie & Vissoort Selectie
+        function selectCategory(catKey, btn) {
+            document.querySelectorAll('.btn-cat').forEach(b => b.classList.remove('active'));
+            if(btn) btn.classList.add('active');
+
+            const speciesPanel = document.getElementById('sub-species-panel');
+            speciesPanel.innerHTML = '';
+
+            const list = speciesData[catKey] || [];
+            list.forEach((fish, index) => {
+                const sBtn = document.createElement('button');
+                sBtn.className = 'btn-species' + (index === 0 ? ' active' : '');
+                sBtn.innerText = fish.name;
+                sBtn.onclick = function() {
+                    document.querySelectorAll('.btn-species').forEach(b => b.classList.remove('active'));
+                    sBtn.classList.add('active');
+                    updateFishAdvice(fish);
+                };
+                speciesPanel.appendChild(sBtn);
+            });
+
+            if (list.length > 0) {
+                updateFishAdvice(list[0]);
+            }
+        }
+
+        function updateFishAdvice(fish) {
+            document.getElementById('fish-title').innerText = `Advies: ${fish.name}`;
+            document.getElementById('depth-info').innerText = fish.depth;
+            document.getElementById('distance-info').innerText = fish.distance;
+            document.getElementById('hotspot-info').innerText = fish.hotspot;
+            document.getElementById('tackle-info').innerText = fish.tackle;
+            document.getElementById('rules-info').innerText = `Min. maat: ${fish.min} | Gesloten tijd: ${fish.closed}`;
+        }
+
         function useCurrentLocation() {
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(function(pos) {
@@ -379,6 +486,7 @@
                         }
                     }
                     document.getElementById('water-info').innerText = `GPS Locatie: ${currentLat.toFixed(4)}, ${currentLng.toFixed(4)}`;
+                    document.getElementById('visplanner-link').href = `https://www.visplanner.nl/?lat=${currentLat}&lng=${currentLng}`;
                 });
             }
         }
