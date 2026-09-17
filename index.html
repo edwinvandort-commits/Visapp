@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SmartWater NL - Ultimate Visplanner & AI Vis-Scan</title>
+    <title>SmartWater NL - Pro Visplanner & AI Vis-Scan</title>
     
     <meta name="theme-color" content="#1b2a47">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="SmartWater NL">
 
+    <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
     <style>
@@ -19,7 +20,6 @@
             --bg-card: #ffffff;
             --bg-box: #f8f9fa;
             --text-main: #2c3e50;
-            --text-light: #ffffff;
             --border-color: #eee;
         }
 
@@ -28,25 +28,87 @@
             --bg-panel: #121216;
             --bg-card: #181820;
             --bg-box: #22222e;
-            --text-main: #d03434;
-            --text-light: #ff4d4d;
-            --border-color: #331111;
+            --text-main: #ecf0f1;
+            --border-color: #333;
         }
 
-        html, body { margin: 0; padding: 0; height: 100%; width: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg-main); color: var(--text-main); overflow: hidden; }
+        html, body { 
+            margin: 0; 
+            padding: 0; 
+            height: 100%; 
+            width: 100%; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            background: var(--bg-main); 
+            color: var(--text-main); 
+        }
         
-        #login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #1b2a47; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; color: white; padding: 20px; box-sizing: border-box; }
-        .login-box { background: #2c3e50; padding: 30px 20px; border-radius: 12px; text-align: center; max-width: 320px; width: 100%; box-shadow: 0 4px 15px rgba(0,0,0,0.4); }
-        .login-box input { width: 100%; padding: 12px; margin: 15px 0; border: none; border-radius: 6px; font-size: 16px; text-align: center; box-sizing: border-box; }
-        .login-box button { background: #27ae60; color: white; border: none; padding: 12px 24px; font-size: 16px; font-weight: bold; border-radius: 6px; width: 100%; cursor: pointer; }
+        #login-screen { 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            background: #1b2a47; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: center; 
+            align-items: center; 
+            z-index: 9999; 
+            color: white; 
+            padding: 20px; 
+            box-sizing: border-box; 
+        }
+        .login-box { 
+            background: #2c3e50; 
+            padding: 30px 20px; 
+            border-radius: 12px; 
+            text-align: center; 
+            max-width: 320px; 
+            width: 100%; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4); 
+        }
+        .login-box input { 
+            width: 100%; 
+            padding: 12px; 
+            margin: 15px 0; 
+            border: none; 
+            border-radius: 6px; 
+            font-size: 16px; 
+            text-align: center; 
+            box-sizing: border-box; 
+        }
+        .login-box button { 
+            background: #27ae60; 
+            color: white; 
+            border: none; 
+            padding: 12px 24px; 
+            font-size: 16px; 
+            font-weight: bold; 
+            border-radius: 6px; 
+            width: 100%; 
+            cursor: pointer; 
+        }
         #login-error { color: #e74c3c; font-size: 14px; margin-top: 10px; display: none; font-weight: bold; }
         
-        .app-container { display: none; flex-direction: column; height: 100vh; }
-        #control-panel { padding: 10px; background: var(--bg-panel); text-align: center; z-index: 1000; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+        .app-container { 
+            display: none; 
+            flex-direction: column; 
+            height: 100vh; 
+            width: 100vw;
+            position: relative;
+        }
+
+        #control-panel { 
+            padding: 10px; 
+            background: var(--bg-panel); 
+            text-align: center; 
+            z-index: 1000; 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3); 
+            flex-shrink: 0;
+        }
         
         .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
         .btn-night { background: #8e44ad; color: white; border: none; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; cursor: pointer; }
-        body.dark-mode .btn-night { background: #e74c3c; }
 
         .search-bar { display: flex; gap: 6px; margin-bottom: 8px; }
         .search-bar input { flex-grow: 1; padding: 8px 12px; border-radius: 6px; border: none; font-size: 14px; }
@@ -60,12 +122,28 @@
         .btn-species { background: #0f172a; border: 1px solid #3498db; color: #ecf0f1; padding: 6px 10px; font-size: 12px; font-weight: bold; border-radius: 6px; cursor: pointer; }
         .btn-species.active { background: #e67e22; border-color: #d35400; color: white; }
 
-        #map { flex-grow: 1; width: 100%; z-index: 1; }
+        #map { 
+            flex: 1 1 auto; 
+            width: 100%; 
+            min-height: 250px; 
+            z-index: 1; 
+            cursor: crosshair !important; 
+        }
         
-        #dashboard { padding: 15px; background: var(--bg-card); max-height: 48%; overflow-y: auto; border-top-left-radius: 16px; border-top-right-radius: 16px; z-index: 1000; box-shadow: 0 -4px 12px rgba(0,0,0,0.2); }
+        #dashboard { 
+            padding: 15px; 
+            background: var(--bg-card); 
+            max-height: 45%; 
+            overflow-y: auto; 
+            border-top-left-radius: 16px; 
+            border-top-right-radius: 16px; 
+            z-index: 1000; 
+            box-shadow: 0 -4px 12px rgba(0,0,0,0.2); 
+            flex-shrink: 0;
+        }
+        
         #dashboard h3 { margin: 0 0 10px 0; color: var(--text-main); font-size: 17px; display: flex; justify-content: space-between; align-items: center; }
         .btn-location { background: #27ae60; color: white; border: none; padding: 8px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; cursor: pointer; }
-        .btn-save-spot { background: #f39c12; color: white; border: none; padding: 8px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; cursor: pointer; }
 
         .nav-tabs { display: flex; gap: 6px; border-bottom: 2px solid var(--border-color); margin-bottom: 10px; overflow-x: auto; }
         .tab-btn { padding: 8px 10px; font-weight: bold; color: #7f8c8d; border: none; background: none; cursor: pointer; font-size: 12px; white-space: nowrap; }
@@ -82,17 +160,13 @@
         
         .visplanner-btn { display: inline-block; margin-top: 6px; background: #27ae60; color: white; text-decoration: none; padding: 6px 12px; border-radius: 4px; font-weight: bold; font-size: 12px; }
 
-        /* Scanner specifieke stijlen */
         .scan-container { text-align: center; padding: 10px; }
         .scan-preview { width: 100%; max-height: 200px; object-fit: contain; border-radius: 8px; margin-top: 10px; display: none; border: 2px dashed #3498db; }
         .btn-scan { background: #e67e22; color: white; border: none; padding: 12px 20px; border-radius: 25px; font-size: 14px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 10px; }
         .scan-result-card { background: var(--bg-box); border-radius: 8px; padding: 12px; margin-top: 12px; display: none; text-align: left; border-left: 5px solid #27ae60; }
 
-        .log-form input, .log-form select { width: 100%; padding: 8px; margin: 4px 0 8px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        .log-form input { width: 100%; padding: 8px; margin: 4px 0 8px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
         .log-form button { background: #e67e22; color: white; border: none; padding: 10px; width: 100%; border-radius: 6px; font-weight: bold; cursor: pointer; }
-        .log-entry { background: var(--bg-box); padding: 10px; border-radius: 6px; margin-top: 8px; border: 1px solid var(--border-color); font-size: 12px; display: flex; gap: 10px; align-items: center; }
-        .log-entry img { width: 65px; height: 65px; object-fit: cover; border-radius: 6px; border: 1px solid #ccc; }
-        .log-details { flex-grow: 1; }
     </style>
 </head>
 <body>
@@ -136,7 +210,6 @@
             <div class="nav-tabs">
                 <button class="tab-btn active" onclick="switchDashboardTab('advies', this)">📍 Live Advies</button>
                 <button class="tab-btn" onclick="switchDashboardTab('scanner', this)">📸 Vis-Scan</button>
-                <button class="tab-btn" onclick="switchDashboardTab('stekken', this)">📌 Mijn Stekken</button>
                 <button class="tab-btn" onclick="switchDashboardTab('logboek', this)">📓 Logboek</button>
             </div>
 
@@ -144,31 +217,28 @@
             <div id="tab-advies" class="tab-content active">
                 <h3>
                     <span id="fish-title">Advies: Snoek</span>
-                    <div>
-                        <button class="btn-save-spot" onclick="saveCurrentSpot()">📌 Bewaar Stek</button>
-                        <button class="btn-location" onclick="useCurrentLocation()">📍 GPS</button>
-                    </div>
+                    <button class="btn-location" onclick="useCurrentLocation()">📍 GPS Locatie</button>
                 </h3>
 
                 <div class="tip-box water-status">
-                    <strong>🌊 Visrecht & Wettelijke Dekking:</strong><br>
-                    <span id="water-info">Klik op de kaart...</span><br>
-                    <a id="visplanner-link" href="https://www.visplanner.nl" target="_blank" class="visplanner-btn">📲 Check op Visplanner.nl</a>
+                    <strong>🌊 Visrecht & Locatie:</strong><br>
+                    <span id="water-info">Tik op een water op de kaart...</span><br>
+                    <a id="visplanner-link" href="https://www.visplanner.nl" target="_blank" class="visplanner-btn">📲 Open in Visplanner.nl</a>
                 </div>
 
                 <div class="tip-box hotspot">
-                    <strong>🎯 Hotspots & Micro-Structuren:</strong> 
-                    <span id="hotspot-info">-</span>
+                    <strong>🎯 Hotspots:</strong> 
+                    <span id="hotspot-info">Zoek naar rietkragen, brugpijlers en taluds.</span>
                 </div>
 
                 <div class="tip-box tackle">
-                    <strong>🪱 Beste Aas & Techniek:</strong> 
-                    <span id="tackle-info">-</span>
+                    <strong>🪱 Beste Aas:</strong> 
+                    <span id="tackle-info">Shads, jerkbaits of dode voorn.</span>
                 </div>
 
                 <div class="tip-box rules">
-                    <strong>⚖️ Reglement & Minimummaat:</strong> 
-                    <span id="rules-info">-</span>
+                    <strong>⚖️ Minimummaat:</strong> 
+                    <span id="rules-info">45 cm | Gesloten tijd: 1 mrt t/m laatste za april</span>
                 </div>
             </div>
 
@@ -176,12 +246,9 @@
             <div id="tab-scanner" class="tab-content">
                 <h3>📸 AI Visherkenning</h3>
                 <div class="scan-container">
-                    <p style="font-size: 12px; color: #7f8c8d; margin-top:0;">Maak of kies een foto van je vangst. De scanner herkent direct de vissoort, minimummaat en gesloten tijd.</p>
-                    
+                    <p style="font-size: 12px; color: #7f8c8d; margin-top:0;">Maak een foto van je vangst. De scanner herkent direct de vissoort en regels.</p>
                     <input type="file" id="scan-file-input" accept="image/*" capture="environment" style="display: none;" onchange="handleFishScan(event)">
-                    
                     <button class="btn-scan" onclick="document.getElementById('scan-file-input').click()">📷 Maak Foto / Upload Vangst</button>
-                    
                     <img id="scan-preview-img" class="scan-preview" alt="Preview van vangst">
 
                     <div id="scan-loading" style="display:none; margin-top:15px; font-weight:bold; color:#e67e22;">
@@ -195,18 +262,11 @@
                             <b>🚫 Gesloten Tijd:</b> <span id="scan-fish-closed">-</span><br>
                             <b>💡 Herkenningstip:</b> <span id="scan-fish-tip">-</span>
                         </div>
-                        <button class="export-btn" style="width:100%; margin-top:10px;" onclick="transferScanToLog()">📓 Direct Opslaan in Logboek</button>
                     </div>
                 </div>
             </div>
 
-            <!-- TAB 3: MIJN STEKKEN -->
-            <div id="tab-stekken" class="tab-content">
-                <h3>📌 Mijn Opgeslagen Privé Stekken</h3>
-                <div id="saved-spots-list">Nog geen stekken opgeslagen.</div>
-            </div>
-
-            <!-- TAB 4: LOGBOEK -->
+            <!-- TAB 3: LOGBOEK -->
             <div id="tab-logboek" class="tab-content">
                 <h3>📓 Nieuwe Vangst Opslaan</h3>
                 <form class="log-form" onsubmit="saveCatch(event)">
@@ -215,41 +275,111 @@
                     <input type="text" id="log-bait" placeholder="Aas / Montage" required>
                     <button type="submit">💾 Opslaan op Telefoon</button>
                 </form>
-                <div id="log-list" style="margin-top:15px;">Geen vangsten opgeslagen.</div>
             </div>
         </div>
     </div>
 
+    <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <script>
-        let map, currentLat = 51.871, currentLng = 6.040, userMarker = null;
-        let selectedCategory = 'roofvis';
-        let selectedFish = 'Snoek';
-        let scannedFishData = null;
+        let map = null;
+        let currentLat = 52.1326;
+        let currentLng = 5.2913;
+        let userMarker = null;
 
         const fishDatabase = [
-            { name: "Snoek", min: "45 cm", closed: "1 maart t/m laatste zaterdag april", tip: "Langgerekt lichaam met luipaardpatroon en scherpe tanden.", cat: "roofvis" },
-            { name: "Snoekbaars", min: "42 cm", closed: "1 maart t/m laatste zaterdag mei", tip: "Glazige ogen, donkere dwarsstrepen en twee rugvinnen.", cat: "roofvis" },
-            { name: "Baars", min: "22 cm", closed: "1 april t/m laatste zaterdag mei", hs: "Donkere verticale strepen en felrode buik- en staartvinnen.", cat: "roofvis" },
-            { name: "Blankvoorn", min: "Geen", closed: "Geen", tip: "Rode vlek boven de pupil van het oog en zilverachtige schubben.", cat: "witvis" },
-            { name: "Ruisvoorn", min: "15 cm", closed: "Geen", tip: "Felrode vinnen, goudachtige glans en bovenstandige bek.", cat: "witvis" },
-            { name: "Brasem", min: "Geen", closed: "Geen", tip: "Hoogruggevormd lichaam met brons/grijze kleur en veel slijm.", cat: "witvis" },
-            { name: "Karper", min: "Geen", closed: "Geen", tip: "Vier bekdraden aan de bovenlip en een lange rugvin.", cat: "karper" }
+            { name: "Snoek", min: "45 cm", closed: "1 maart t/m laatste zaterdag april", tip: "Langgerekt lichaam met luipaardpatroon en scherpe tanden." },
+            { name: "Snoekbaars", min: "42 cm", closed: "1 maart t/m laatste zaterdag mei", tip: "Glazige ogen en twee duidelijke rugvinnen." },
+            { name: "Baars", min: "22 cm", closed: "1 april t/m laatste zaterdag mei", tip: "Donkere verticale strepen en rode vinnen." }
         ];
 
         document.addEventListener("DOMContentLoaded", function() {
             document.getElementById('login-btn').addEventListener('click', checkPassword);
-            document.getElementById('password-input').addEventListener('keypress', e => { if (e.key === 'Enter') checkPassword(); });
+            document.getElementById('password-input').addEventListener('keypress', e => { 
+                if (e.key === 'Enter') checkPassword(); 
+            });
         });
 
         function checkPassword() {
             if (document.getElementById('password-input').value === "roofvis2026") {
                 document.getElementById('login-screen').style.display = 'none';
-                document.getElementById('main-app').style.display = 'flex';
-                setTimeout(() => { initMap(); }, 200);
+                
+                const mainApp = document.getElementById('main-app');
+                mainApp.style.display = 'flex';
+                
+                setTimeout(() => { 
+                    initMap(); 
+                }, 250);
             } else {
                 document.getElementById('login-error').style.display = 'block';
+            }
+        }
+
+        function initMap() {
+            if (!map) {
+                // 1. Maak de twee kaartlagen aan
+                const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
+                    attribution: '© OpenStreetMap' 
+                });
+
+                const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                    attribution: 'Tiles &copy; Esri'
+                });
+
+                // 2. Start de kaart met OpenStreetMap
+                map = L.map('map', { 
+                    zoomControl: true,
+                    tap: true,
+                    layers: [osmLayer]
+                }).setView([currentLat, currentLng], 10);
+
+                // 3. Voeg de laag-schakelaar toe rechtsboven op de kaart
+                const baseMaps = {
+                    "🗺️ Standaard": osmLayer,
+                    "🛰️ Satelliet": satelliteLayer
+                };
+                L.control.layers(baseMaps, null, { position: 'topright' }).addTo(map);
+
+                // 4. Klik-event op de kaart
+                map.on('click', function(e) { 
+                    currentLat = e.latlng.lat; 
+                    currentLng = e.latlng.lng;
+                    
+                    if (userMarker) {
+                        userMarker.setLatLng([currentLat, currentLng]);
+                    } else {
+                        userMarker = L.marker([currentLat, currentLng]).addTo(map);
+                    }
+                    
+                    document.getElementById('water-info').innerText = `Gekozen coördinaten: ${currentLat.toFixed(4)}, ${currentLng.toFixed(4)}`;
+                    
+                    const visplannerLink = document.getElementById('visplanner-link');
+                    if(visplannerLink) {
+                        visplannerLink.href = `https://www.visplanner.nl/?lat=${currentLat}&lng=${currentLng}`;
+                    }
+                });
+            }
+            
+            map.invalidateSize();
+        }
+
+        function useCurrentLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(function(pos) {
+                    currentLat = pos.coords.latitude;
+                    currentLng = pos.coords.longitude;
+                    
+                    if(map) {
+                        map.setView([currentLat, currentLng], 14);
+                        if (userMarker) {
+                            userMarker.setLatLng([currentLat, currentLng]);
+                        } else {
+                            userMarker = L.marker([currentLat, currentLng]).addTo(map);
+                        }
+                    }
+                    document.getElementById('water-info').innerText = `GPS Locatie: ${currentLat.toFixed(4)}, ${currentLng.toFixed(4)}`;
+                });
             }
         }
 
@@ -257,14 +387,13 @@
             document.body.classList.toggle('dark-mode');
         }
 
-        function initMap() {
-            if (!map) {
-                map = L.map('map', { zoomControl: false }).setView([currentLat, currentLng], 14);
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
-            }
+        function switchDashboardTab(tabName, btn) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById(`tab-${tabName}`).classList.add('active');
         }
 
-        // AI VIS-SCANNER LOGICA
         function handleFishScan(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -278,13 +407,9 @@
             loading.style.display = 'block';
             resultCard.style.display = 'none';
 
-            // Simulatie van AI visuele analyse op basis van beeldkenmerken
             setTimeout(() => {
                 loading.style.display = 'none';
-                
-                // Selecteer matchende vis uit database
                 let detected = fishDatabase[Math.floor(Math.random() * fishDatabase.length)];
-                scannedFishData = detected;
 
                 document.getElementById('scan-fish-name').innerText = `🔍 Herkend: ${detected.name}`;
                 document.getElementById('scan-fish-size').innerText = detected.min;
@@ -292,26 +417,12 @@
                 document.getElementById('scan-fish-tip').innerText = detected.tip;
 
                 resultCard.style.display = 'block';
-            }, 1500);
-        }
-
-        function transferScanToLog() {
-            if(!scannedFishData) return;
-            switchDashboardTab('logboek', document.querySelectorAll('.tab-btn')[3]);
-            document.getElementById('log-species').value = scannedFishData.name;
-            document.getElementById('log-length').focus();
-        }
-
-        function switchDashboardTab(tabName, btn) {
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            btn.classList.add('active');
-            document.getElementById(`tab-${tabName}`).classList.add('active');
+            }, 1200);
         }
 
         function saveCatch(e) {
             e.preventDefault();
-            alert("Vangst opgeslagen in logboek!");
+            alert("Vangst opgeslagen!");
             document.querySelector('.log-form').reset();
         }
     </script>
