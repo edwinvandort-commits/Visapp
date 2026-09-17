@@ -227,8 +227,8 @@
                 </div>
 
                 <div class="tip-box recommendation">
-                    <strong>💡 Welke Vissoort Nu Targetten? (Weer & Water-advies):</strong><br>
-                    <span id="recommendation-info">Klik op de kaart voor live visadvies op basis van weer en watertype...</span>
+                    <strong>💡 Welke Vissoort Nu Targetten? (Seizoen, Weer & Water):</strong><br>
+                    <span id="recommendation-info">Klik op de kaart voor live visadvies op basis van seizoen, weer en watertype...</span>
                 </div>
 
                 <div class="tip-box depth-advice">
@@ -397,12 +397,10 @@
             map.invalidateSize();
         }
 
-        // 1. Zoek Fysieke Hotspots op de Kaart per Vissoort
         function loadHotspotMarkers(lat, lng, fish) {
             hotspotMarkers.forEach(m => map.removeLayer(m));
             hotspotMarkers = [];
 
-            // Query voor fysieke structuren binnen 500m
             const query = `[out:json][timeout:10];
                 (
                   way["bridge"](around:500,${lat},${lng});
@@ -454,7 +452,6 @@
                 .catch(() => {});
         }
 
-        // 2. Gecombineerd Water- en Weeradvies bij Klik op Water
         function analyzeWaterAndWeather(lat, lng) {
             const infoBox = document.getElementById('water-info');
             const recBox = document.getElementById('recommendation-info');
@@ -462,7 +459,14 @@
             infoBox.innerHTML = `⏳ Water & Weer analyseren...`;
             recBox.innerHTML = `⏳ Bepalen wat nu het beste bijt...`;
 
-            // Ophalen Water-data & Live Weer-data parallel
+            // Bepaal het huidige seizoen op basis van de datum
+            const month = new Date().getMonth() + 1; 
+            let season = "";
+            if (month >= 3 && month <= 5) season = "Voorjaar";
+            else if (month >= 6 && month <= 8) season = "Zomer";
+            else if (month >= 9 && month <= 11) season = "Najaar";
+            else season = "Winter";
+
             const waterQuery = `[out:json];(way(around:60,${lat},${lng})["waterway"];relation(around:60,${lat},${lng})["natural"="water"];);out tags;`;
             const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,wind_speed_10m,surface_pressure`;
 
@@ -471,7 +475,6 @@
                 fetch(weatherUrl).then(r => r.json())
             ]).then(([waterData, weatherData]) => {
                 
-                // --- Wateranalyse ---
                 let waterName = "Gedetecteerd Binnenwater";
                 let waterType = "polder/sloot";
 
@@ -487,30 +490,28 @@
 
                 infoBox.innerHTML = `<b>📍 ${waterName}</b> (${waterType})<br>${vispasStatus}`;
 
-                // --- Live Weer & Vistype Advies ---
                 const temp = weatherData.current.temperature_2m;
                 const wind = Math.round(weatherData.current.wind_speed_10m);
                 const pressure = Math.round(weatherData.current.surface_pressure);
 
                 let advice = "";
 
-                if (temp < 10) {
-                    if (waterType === "river" || waterType === "canal") {
-                        advice = `🌡️ <b>Koud weer (${temp}°C) op diep water:</b> Target vandaag <b>Snoekbaars</b> of <b>Brasem</b> op de diepste stukken / vaargeulen. Vis heel langzaam!`;
+                // SEIZOENSGEBONDEN ADVIES LOGICA
+                if (season === "Winter") {
+                    advice = `❄️ <b>Winteradvies (${temp}°C):</b> Vissen liggen op de diepste punten of in rustige havens. Target <b>Snoek met doodaas</b> op de bodem of visserij met de <b>Feeder op Brasem</b> op diep water. Vis extreem traag!`;
+                } else if (season === "Voorjaar") {
+                    advice = `🌸 <b>Voorjaarsadvies (${temp}°C):</b> Vissen trekken naar de ondieptes om op te warmen en te paaien. Let op de gesloten tijd voor kunstaas/roofvis (1 apr - eind mei). **Karper** en **Zeelt** zijn nu uitstekend te bevissen op zonnige polderstekken!`;
+                } else if (season === "Zomer") {
+                    if (temp > 22) {
+                        advice = `☀️ <b>Zomeradvies (${temp}°C):</b> Warm water bevat minder zuurstof. Zoek **stromend water bij stuwen/sluizen** of vis in de vroege ochtend. Top-tijd voor **Oppervlaktekarper** en **Roofblei**!`;
                     } else {
-                        advice = `🌡️ <b>Koud weer (${temp}°C) op polder/vijver:</b> <b>Snoek</b> is nu actief met doodaas bij bruggen en diepere kommen.`;
+                        advice = `🌿 <b>Zomeradvies (${temp}°C):</b> Hoge activiteit! Vis langs dichte plantenbedden en lelies op **Baars** en **Ruishoorn**, of 's avonds op **Snoekbaars** op de taluds.`;
                     }
-                } else if (temp >= 10 && temp <= 22) {
-                    if (wind > 20) {
-                        advice = `💨 <b>Stevige wind (${wind} km/u) & ${temp}°C:</b> Aan de lagerwal (waar de wind naartoe waait) verzamelt zich aasvis. Perfect voor <b>Roofblei</b>, <b>Snoek</b> of een actieve <b>Feeder-sessie op Brasem</b>!`;
-                    } else {
-                        advice = `🌤️ <b>Uitstekende condities (${temp}°C, ${pressure} hPa):</b> **Karper** en **Baars** zijn erg actief! Probeer karper op ondiepe platen of baars rond structuren.`;
-                    }
-                } else {
-                    advice = `☀️ <b>Warm weer (${temp}°C):</b> Vissen zoeken zuurstof. Focussen op <b>Stroomversnellingen/Stuwen</b> of vissen aan de oppervlakte op <b>Karper / Graskarper</b> met broodkorst.`;
+                } else if (season === "Najaar") {
+                    advice = `🍂 <b>Najaarsadvies (${temp}°C):</b> **Najaars-vreetfeest!** Vissen bouwen winterreserves op. Dit is dé tijd voor grote **Snoek** en **Snoekbaars** met groter kunstaas (shads 15cm+) en zware **Karper-sessies**.`;
                 }
 
-                recBox.innerHTML = `${advice}<br><small style="color:#7f8c8d;">Actueel weer: ${temp}°C | Wind: ${wind} km/u | Luchtdruk: ${pressure} hPa</small>`;
+                recBox.innerHTML = `<b>Seizoen: ${season}</b><br>${advice}<br><small style="color:#7f8c8d;">Weer: ${temp}°C | Wind: ${wind} km/u | Luchtdruk: ${pressure} hPa</small>`;
 
             }).catch(() => {
                 infoBox.innerHTML = `📍 Gekozen locatie: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
