@@ -13,16 +13,21 @@
 </head>
 <body>
 
-    <div id="controls-bar">
+    <header id="controls-bar">
         <div class="control-group">
-            <label for="species-select">🐟 Vissoort:</label>
-            <select id="species-select">
-                <option value="snoekbaars" selected>Snoekbaars</option>
-                <option value="snoek">Snoek</option>
-                <option value="baars">Baars</option>
-                <option value="karper">Karper</option>
-                <option value="witvis">Witvis / Brasem</option>
-            </select>
+            <span class="logo">🐟 SmartWater NL</span>
+        </div>
+
+        <div class="control-group">
+            <button id="btn-cat-roofvis" class="btn-cat active" data-cat="roofvis">Roofvis</button>
+            <button id="btn-cat-witvis" class="btn-cat" data-cat="witvis">Witvis</button>
+            <button id="btn-cat-karper" class="btn-cat" data-cat="karper">Karper</button>
+            <button id="btn-cat-forel" class="btn-cat" data-cat="forel">Forel</button>
+            <button id="btn-cat-paling" class="btn-cat" data-cat="paling">Paling</button>
+        </div>
+
+        <div id="sub-species-panel" class="control-group">
+            <!-- Dynamische vissoort-knoppen via ui.js -->
         </div>
 
         <div class="control-group">
@@ -34,23 +39,68 @@
                 <option value="zomer">Zomer</option>
             </select>
         </div>
-    </div>
 
-    <div id="status-bar">Status: Kaart laden...</div>
-    <div id="map"></div>
+        <button id="btn-night" title="Nachtstand">🌙</button>
+    </header>
 
-    <div id="dashboard">
-        <div id="dashboard-content">
-            <p class="placeholder-text">
-                Klik op een water op de kaart in Nederland om het <b>Gedetailleerd Visadvies</b> en de <b>Indicatieve Weerscore</b> te bekijken.
-            </p>
-        </div>
-    </div>
+    <div id="status-bar" aria-live="polite">Status: Kaart laden...</div>
+
+    <main id="main-content">
+        <div id="map"></div>
+
+        <aside id="dashboard">
+            <h2 id="fish-title">Selecteer een locatie op de kaart</h2>
+
+            <!-- Tabs -->
+            <div class="tab-nav">
+                <button class="tab-btn active" data-tab="advies">🎯 Advies & Aas</button>
+                <button class="tab-btn" data-tab="water">🌊 Water & Omstandigheden</button>
+                <button class="tab-btn" data-tab="solunar">🌙 Maan & Ecologie</button>
+            </div>
+
+            <!-- Tab 1: Advies & Aas -->
+            <div id="tab-advies" class="tab-content active">
+                <div class="advice-card">
+                    <h3>🎣 Aanbevolen Materiaal & Aas</h3>
+                    <p id="tackle-info">Klik op een water op de kaart om advies te tonen.</p>
+                </div>
+                <div class="advice-card">
+                    <h3>📍 Hotspots & Structuren</h3>
+                    <p id="hotspot-info">Selecteer een stek op de kaart.</p>
+                </div>
+            </div>
+
+            <!-- Tab 2: Water & Omstandigheden -->
+            <div id="tab-water" class="tab-content">
+                <div class="advice-card">
+                    <h3>🌊 Hydrografie</h3>
+                    <p id="hydro-info">Geen watergrootte of diepte geladen.</p>
+                    <p id="tidal-info" style="display:none;"></p>
+                </div>
+                <div class="advice-card">
+                    <h3>🌡️ Watertemperatuur & Zuurstof</h3>
+                    <p id="water-temp-info">Selecteer een stek om temperatuur af te lezen.</p>
+                </div>
+            </div>
+
+            <!-- Tab 3: Maan & Ecologie -->
+            <div id="tab-solunar" class="tab-content">
+                <div class="advice-card">
+                    <h3>🌙 Solunaire Aasactiviteit</h3>
+                    <p id="solunar-info">Geen astronoom-data beschikbaar.</p>
+                </div>
+                <div class="advice-card">
+                    <h3>🛡️ Regelgeving & Ethisch Advies</h3>
+                    <p id="eco-info">Geen regelgeving geladen.</p>
+                </div>
+            </div>
+        </aside>
+    </main>
 
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     
-    <!-- Modulaire JS Applicatie -->
-    <script type="module" src="js/map.js"></script>
+    <!-- Hoofd JavaScript Module -->
+    <script type="module" src="js/app.js"></script>
 </body>
 </html>
