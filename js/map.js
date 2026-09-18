@@ -46,6 +46,11 @@ export function initMap(initialLat, initialLng, onLocationSelect) {
         await processLocationChange(lat, lng, onLocationSelect);
     });
 
+    // FIX: Dwing Leaflet om de container-grootte opnieuw te berekenen zodra de DOM klaar is
+    setTimeout(() => {
+        map.invalidateSize();
+    }, 250);
+
     return map;
 }
 
@@ -61,6 +66,8 @@ export function centerMap(lat, lng, zoom = 13) {
     if (map) {
         map.setView([lat, lng], zoom);
         setUserMarker(lat, lng);
+        // Extra afmetingen-check bij centreren
+        setTimeout(() => map.invalidateSize(), 100);
     }
 }
 
