@@ -1,7 +1,6 @@
-// js/ui.js
-import { speciesData, getSolunarData, calculateWaterTemp, getSpeciesEcoRules, getCurrentSeason } from './advice.js';
+import { speciesData, getSolunarData, calculateWaterTemp, getSpeciesEcoRules } from './advice.js';
 
-export function setupUI(onCategoryChange, onSpeciesChange, onSearch) {
+export function setupUI(onCategoryChange, onSpeciesChange) {
     // Nachtstand toggle
     const nightBtn = document.getElementById('btn-night');
     if (nightBtn) {
@@ -10,19 +9,9 @@ export function setupUI(onCategoryChange, onSpeciesChange, onSearch) {
         });
     }
 
-    // Zoekbalk event
-    const searchBtn = document.getElementById('search-btn');
-    const searchInput = document.getElementById('search-input');
-    if (searchBtn && searchInput) {
-        searchBtn.addEventListener('click', () => onSearch(searchInput.value));
-        searchInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') onSearch(searchInput.value);
-        });
-    }
-
     // Categorie knoppen
     document.querySelectorAll('.btn-cat').forEach(btn => {
-        btn.addEventListener('click', (e) => {
+        btn.addEventListener('click', () => {
             document.querySelectorAll('.btn-cat').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             const catKey = btn.dataset.cat;
@@ -42,6 +31,9 @@ export function setupUI(onCategoryChange, onSpeciesChange, onSearch) {
             if (targetEl) targetEl.classList.add('active');
         });
     });
+
+    // Laad standaard eerste categorie (Roofvis)
+    renderSpeciesButtons('roofvis', onSpeciesChange);
 }
 
 export function renderSpeciesButtons(catKey, onSpeciesChange) {
@@ -68,20 +60,24 @@ export function renderSpeciesButtons(catKey, onSpeciesChange) {
     }
 }
 
-/**
- * Rendert het complete Fase 2 advies op het dashboard
- */
-export function updateDashboardUI(fish, waterChar, tidalInfo, weatherData) {
-    const season = getCurrentSeason();
+export function updateDashboardUI(fish, waterChar, tidalInfo, weatherData, season) {
     const solunar = getSolunarData();
-    const waterTemp = calculateWaterTemp(weatherData.temp, season);
+    const airTemp = weatherData ? weatherData.temp : 15;
+    const waterTemp = calculateWaterTemp(airTemp, season);
     const ecoRules = getSpeciesEcoRules(fish.key || fish.name.toLowerCase(), season);
 
-    // Dynamic Title
+    // Titel
     const titleEl = document.getElementById('fish-title');
-    if (titleEl) titleEl.innerText = `Advies: ${fish.name}`;
+    if (titleEl) titleEl.innerText = `Visadvies: ${fish.name}`;
 
-    // 1. Hydrografie & Watertype
+    // 1. Advies & Aas
+    const tackleEl = document.getElementById('tackle-info');
+    if (tackleEl) tackleEl.innerText = fish.tackle;
+
+    const hotspotEl = document.getElementById('hotspot-info');
+    if (hotspotEl) hotspotEl.innerText = `${fish.hotspot} (Richtinggevende diepte: ${fish.depth})`;
+
+    // 2. Hydrografie & Watertemperatuur
     const hydroEl = document.getElementById('hydro-info');
     if (hydroEl) {
         hydroEl.innerHTML = `
@@ -91,17 +87,6 @@ export function updateDashboardUI(fish, waterChar, tidalInfo, weatherData) {
         `;
     }
 
-    // 2. Solunaire & Astronomische Piekuren
-    const solunarEl = document.getElementById('solunar-info');
-    if (solunarEl) {
-        solunarEl.innerHTML = `
-            • <b>Maanfase:</b> ${solunar.phaseName} (Dag ${solunar.moonAgeDays})<br>
-            • <b>Piekuren:</b> ${solunar.majorPeriods}<br>
-            • <b>Aasactiviteit Bonus:</b> +${solunar.scoreBonus}%
-        `;
-    }
-
-    // 3. Getijden & Estuarium
     const tidalEl = document.getElementById('tidal-info');
     if (tidalEl) {
         if (tidalInfo.isTidal) {
@@ -112,19 +97,27 @@ export function updateDashboardUI(fish, waterChar, tidalInfo, weatherData) {
         }
     }
 
-    // 4. Watertemperatuur & Zuurstof
     const tempEl = document.getElementById('water-temp-info');
     if (tempEl) {
         tempEl.innerHTML = `
-            • <b>Lucht / Geschat Water:</b> ${weatherData.temp}°C / <b>${waterTemp.estimatedWaterTemp}°C</b><br>
+            • <b>Lucht / Geschat Water:</b> ${airTemp}°C / <b>${waterTemp.estimatedWaterTemp}°C</b><br>
             • <b>Zuurstofgehalte:</b> ${waterTemp.oxygenStatus}
         `;
     }
 
-    // 5. Seizoen, Paaitijden & Ethisch Advies
+    // 3. Solunar & Ecologie
+    const solunarEl = document.getElementById('solunar-info');
+    if (solunarEl) {
+        solunarEl.innerHTML = `
+            • <b>Maanfase:</b> ${solunar.phaseName} (Dag ${solunar.moonAgeDays})<br>
+            • <b>Piekuren:</b> ${solunar.majorPeriods}<br>
+            • <b>Aasactiviteit Bonus:</b> +${solunar.scoreBonus}%
+        `;
+    }
+
     const ecoEl = document.getElementById('eco-info');
     if (ecoEl) {
-        let warningText = ecoRules.warning ? `<p style="color:#d35400; font-weight:bold; margin:2px 0;">${ecoRules.warning}</p>` : '';
+        let warningText = ecoRules.warning ? `<p class="warning-text">${ecoRules.warning}</p>` : '';
         ecoEl.innerHTML = `
             ${warningText}
             • <b>Minimale maat:</b> ${fish.min}<br>
@@ -132,11 +125,4 @@ export function updateDashboardUI(fish, waterChar, tidalInfo, weatherData) {
             • <b>Ethisch advies:</b> ${ecoRules.ethicsTip}
         `;
     }
-
-    // Aas & Hotspots
-    const tackleEl = document.getElementById('tackle-info');
-    if (tackleEl) tackleEl.innerText = fish.tackle;
-
-    const hotspotEl = document.getElementById('hotspot-info');
-    if (hotspotEl) hotspotEl.innerText = fish.hotspot;
 }
