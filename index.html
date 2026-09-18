@@ -165,6 +165,7 @@
         .scan-preview { width: 100%; max-height: 200px; object-fit: contain; border-radius: 8px; margin-top: 10px; display: none; border: 2px dashed #3498db; }
         .btn-scan { background: #e67e22; color: white; border: none; padding: 12px 20px; border-radius: 25px; font-size: 14px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 10px; }
         .scan-result-card { background: var(--bg-box); border-radius: 8px; padding: 12px; margin-top: 12px; display: none; text-align: left; border-left: 5px solid #27ae60; }
+        .scan-notice { background: #fff3cd; color: #7a4a00; border: 1px solid #ffe69c; border-radius: 8px; padding: 8px 10px; font-size: 12px; line-height: 1.5; margin-top: 10px; display: none; }
 
         .log-form input { width: 100%; padding: 8px; margin: 4px 0 8px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
         .log-form button { background: #e67e22; color: white; border: none; padding: 10px; width: 100%; border-radius: 6px; font-weight: bold; cursor: pointer; }
@@ -250,15 +251,19 @@
 
             <!-- TAB 2: AI VIS-SCANNER -->
             <div id="tab-scanner" class="tab-content">
-                <h3>📸 AI Visherkenning</h3>
+                <h3>📸 Vis-Scan (demo / voorlopig)</h3>
                 <div class="scan-container">
-                    <p style="font-size: 12px; color: #7f8c8d; margin-top:0;">Maak een foto van je vangst. De scanner herkent direct de vissoort en regels.</p>
+                    <p style="font-size: 12px; color: #7f8c8d; margin-top:0;">Upload een foto van je vangst. De scanner is momenteel een demo-functionaliteit en geeft geen officiële identificatie.</p>
                     <input type="file" id="scan-file-input" accept="image/*" capture="environment" style="display: none;" onchange="handleFishScan(event)">
                     <button class="btn-scan" onclick="document.getElementById('scan-file-input').click()">📷 Maak Foto / Upload Vangst</button>
                     <img id="scan-preview-img" class="scan-preview" alt="Preview van vangst">
 
                     <div id="scan-loading" style="display:none; margin-top:15px; font-weight:bold; color:#e67e22;">
                         🔄 Viskenmerken analyseren...
+                    </div>
+
+                    <div id="scan-notice" class="scan-notice" aria-live="polite">
+                        ⚠️ Let op: deze scan is geen officiële visherkenning. Controleer de vissoort en regels altijd handmatig.
                     </div>
 
                     <div id="scan-result" class="scan-result-card">
@@ -298,10 +303,11 @@
 
         const speciesData = {
             roofvis: [
-                { name: "Snoek", depth: "0.5 - 2.5 meter", distance: "3 - 15 meter (bij oever/planten)", tackle: "Shads (12-20cm), jerkbaits, spinnerbaits of dode voorn.", min: "45 cm", closed: "1 mrt t/m laatste za april" },
-                { name: "Snoekbaars", depth: "3.0 - 8.0 meter (Bodem)", distance: "10 - 40 meter (Taluds en vaargeulen)", tackle: "Jiggen met shads (8-12cm), dropshot, kleine doodaasvisjes.", min: "42 cm", closed: "1 mrt t/m laatste za mei" },
-                { name: "Baars", depth: "1.0 - 4.0 meter", distance: "2 - 20 meter (Oeverstructuren & kades)", tackle: "Kleine spinners, twitchbaits, dropshot met worms of shads.", min: "22 cm", closed: "1 apr t/m laatste za mei" },
-                { name: "Meerval", depth: "2.0 - 10.0 meter", distance: "15 - 50 meter (Diepe gaten)", tackle: "Grote trossen pieren, grote meervalshads, stroomopwaarts vissen.", min: "Geen (Terugzetplicht)", closed: "Geen" }
+                { name: "Snoek", depth: "0.5 - 2.5 meter", distance: "3 - 15 meter (bij oever/planten)", tackle: "Shads (12-20cm), jerkbaits, spinnerbaits of dode voorn.", min: "45 cm", closed: "1 maart t/m laatste zaterdag april" },
+                { name: "Snoekbaars", depth: "3.0 - 8.0 meter (Bodem)", distance: "10 - 40 meter (Taluds en vaargeulen)", tackle: "Jiggen met shads (8-12cm), dropshot, kleine doodaasvisjes.", min: "42 cm", closed: "1 maart t/m laatste zaterdag mei" },
+                { name: "Baars", depth: "1.0 - 4.0 meter", distance: "2 - 20 meter (Oeverstructuren & kades)", tackle: "Kleine spinners, twitchbaits, dropshot met worms of shads.", min: "22 cm", closed: "1 april t/m laatste zaterdag mei" },
+                { name: "Meerval", depth: "2.0 - 10.0 meter", distance: "15 - 50 meter (Diepe gaten)", tackle: "Grote trossen pieren, grote meervalshads, stroomopwaarts vissen.", min: "Geen", closed: "Geen" },
+                { name: "Paling", depth: "Bodem (1.5 - 6.0 meter)", distance: "5 - 25 meter", tackle: "⚠️ NVT: Paling heeft in NL een algehele meeneem- en vangstbeperking.", min: "Beschermd", closed: "Hele jaar verboden" }
             ],
             witvis: [
                 { name: "Brasem", depth: "Bodem (2.0 - 6.0 meter)", distance: "15 - 40 meter (Feederafstand)", tackle: "Feederhengel, korf met voer, maden, casters, maïs en pier.", min: "Geen", closed: "Geen" },
@@ -309,21 +315,23 @@
                 { name: "Zeelt", depth: "0.5 - 2.0 meter (Bodem)", distance: "2 - 10 meter (Dicht bij waterplanten)", tackle: "Matchhengel met dobber, maïs, pier, zachte mini-boilies.", min: "Geen", closed: "Geen" }
             ],
             karper: [
-                { name: "Spiegel/Schubkarper", depth: "1.0 - 4.0 meter (Bodem)", distance: "10 - 50 meter (Hardere platen/Schone stekken)", tackle: "Self-hook rigs, boilies, tijgernoten, pop-ups op een voerplek.", min: "Geen", closed: "Geen" },
+                { name: "Spiegel/Schubkarper", depth: "1.0 - 4.0 meter (Bodem)", distance: "10 - 50 meter (Hardere platen/Schone stekken)", tackle: "Self-hook rigs, boilies, tijgernoten, pop-ups, kruimelvoeding.", min: "Geen", closed: "Geen" },
                 { name: "Graskarper", depth: "0.2 - 1.5 meter (Oppervlakte / Ondiep)", distance: "5 - 20 meter", tackle: "Korst brood aan de oppervlakte, maïs op de bodem.", min: "Geen", closed: "Geen" }
             ],
             forel: [
                 { name: "Regenboogforel", depth: "0.5 - 2.5 meter", distance: "10 - 30 meter", tackle: "PowerBait, lepel/spinner, wasmotten onder een spiroline.", min: "Geen", closed: "Geen" }
             ],
             paling: [
-                { name: "Paling", depth: "Bodem (1.5 - 6.0 meter)", distance: "5 - 25 meter", tackle: "⚠️ NVT: Paling heeft in NL een algehele meeneem- en vangstbeperking.", min: "BESCHERMD", closed: "Het hele jaar beschermd" }
+                { name: "Paling", depth: "Bodem (1.5 - 6.0 meter)", distance: "5 - 25 meter", tackle: "⚠️ NVT: Paling heeft in NL een algehele meeneem- en vangstbeperking.", min: "Beschermd", closed: "Hele jaar verboden" }
             ]
         };
 
         const fishDatabase = [
             { name: "Snoek", min: "45 cm", closed: "1 maart t/m laatste zaterdag april", tip: "Langgerekt lichaam met luipaardpatroon en scherpe tanden." },
             { name: "Snoekbaars", min: "42 cm", closed: "1 maart t/m laatste zaterdag mei", tip: "Glazige ogen en twee duidelijke rugvinnen." },
-            { name: "Baars", min: "22 cm", closed: "1 april t/m laatste zaterdag mei", tip: "Donkere verticale strepen en rode vinnen." }
+            { name: "Baars", min: "22 cm", closed: "1 april t/m laatste zaterdag mei", tip: "Donkere verticale strepen en rode vinnen." },
+            { name: "Brasem", min: "Geen", closed: "Geen", tip: "Licht gekleurde flank en brede, platte lichaamssilhouet." },
+            { name: "Forel", min: "Geen", closed: "Geen", tip: "Lichte vlekken en gestroomlijnd lichaam." }
         ];
 
         document.addEventListener("DOMContentLoaded", function() {
@@ -459,7 +467,6 @@
             infoBox.innerHTML = `⏳ Water & Visrecht analyseren...`;
             recBox.innerHTML = `⏳ Live weer & visadvies berekenen...`;
 
-            // 1. Bepaal het seizoen
             const month = new Date().getMonth() + 1; 
             let season = "";
             if (month >= 3 && month <= 5) season = "Voorjaar";
@@ -467,7 +474,6 @@
             else if (month >= 9 && month <= 11) season = "Najaar";
             else season = "Winter";
 
-            // 2. Haal WEER-gegevens op (met error-fallback)
             const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,wind_speed_10m,surface_pressure`;
             fetch(weatherUrl)
                 .then(r => r.json())
@@ -478,17 +484,17 @@
 
                     let advice = "";
                     if (season === "Winter") {
-                        advice = `❄️ <b>Winteradvies (${temp}°C):</b> Vissen liggen op de diepste punten of in rustige havens. Target <b>Snoek met doodaas</b> op de bodem of visserij met de <b>Feeder op Brasem</b> op diep water. Vis extreem traag!`;
+                        advice = `❄️ <b>Winteradvies (${temp}°C):</b> Vissen liggen op de diepste punten of in rustige havens. Target <b>Snoek met doodaas</b> op de bodem of visserij met de juiste diepte.`;
                     } else if (season === "Voorjaar") {
-                        advice = `🌸 <b>Voorjaarsadvies (${temp}°C):</b> Vissen trekken naar de ondieptes om op te warmen en te paaien. Let op de gesloten tijd voor kunstaas/roofvis (1 apr - eind mei). **Karper** en **Zeelt** zijn nu uitstekend te bevissen op zonnige polderstekken!`;
+                        advice = `🌸 <b>Voorjaarsadvies (${temp}°C):</b> Vissen trekken naar de ondieptes om op te warmen en te paaien. Let op de gesloten tijd voor kunstaas/roofvis, afhankelijk van water en visrecht.`;
                     } else if (season === "Zomer") {
                         if (temp > 22) {
-                            advice = `☀️ <b>Zomeradvies (${temp}°C):</b> Warm water bevat minder zuurstof. Zoek **stromend water bij stuwen/sluizen** of vis in de vroege ochtend. Top-tijd voor **Oppervlaktekarper** en **Roofblei**!`;
+                            advice = `☀️ <b>Zomeradvies (${temp}°C):</b> Warm water bevat minder zuurstof. Zoek stromend water bij stuwen/sluizen of vis in de vroege ochtend.`;
                         } else {
-                            advice = `🌿 <b>Zomeradvies (${temp}°C):</b> Hoge activiteit! Vis langs dichte plantenbedden en lelies op **Baars** en **Ruishoorn**, of 's avonds op **Snoekbaars** op de taluds.`;
+                            advice = `🌿 <b>Zomeradvies (${temp}°C):</b> Hoge activiteit! Vis langs dichte plantenbedden en lelies op <b>Baars</b> en <b>Voorn</b>, of 's avonds op <b>Snoekbaars</b>.`;
                         }
                     } else if (season === "Najaar") {
-                        advice = `🍂 <b>Najaarsadvies (${temp}°C):</b> **Najaars-vreetfeest!** Vissen bouwen winterreserves op. Dit is dé tijd voor grote **Snoek** en **Snoekbaars** met groter kunstaas (shads 15cm+) en zware **Karper-sessies**.`;
+                        advice = `🍂 <b>Najaarsadvies (${temp}°C):</b> Najaars-vreetfeest! Vissen bouwen winterreserves op. Dit is vaak dé tijd voor grote <b>Snoek</b> en <b>Snoekbaars</b> met grote aassoorten.`;
                     }
 
                     recBox.innerHTML = `<b>Seizoen: ${season}</b><br>${advice}<br><small style="color:#7f8c8d;">Weer: ${temp}°C | Wind: ${wind} km/u | Luchtdruk: ${pressure} hPa</small>`;
@@ -497,7 +503,6 @@
                     recBox.innerHTML = `<b>Seizoen: ${season}</b><br>💡 Geen live weerdata beschikbaar. Vis aan de hand van de gekozen vissoort-tips.`;
                 });
 
-            // 3. Haal WATER-gegevens op (met robuuste overpass query)
             const waterQuery = `[out:json][timeout:5];
                 (
                   way(around:150,${lat},${lng})["waterway"];
@@ -636,27 +641,49 @@
             document.getElementById(`tab-${tabName}`).classList.add('active');
         }
 
+        function getDeterministicDemoIndex(fileName) {
+            if (!fileName) return 0;
+            let hash = 0;
+            for (let i = 0; i < fileName.length; i++) {
+                hash = (hash * 31 + fileName.charCodeAt(i)) >>> 0;
+            }
+            return hash % fishDatabase.length;
+        }
+
         function handleFishScan(event) {
-            const file = event.target.files[0];
+            const file = event.target.files && event.target.files[0];
             if (!file) return;
+
+            if (!file.type.startsWith('image/')) {
+                alert('Upload alleen een afbeelding van een vis of vangst.');
+                return;
+            }
+
+            const maxSizeInMb = 10;
+            if (file.size > maxSizeInMb * 1024 * 1024) {
+                alert(`De afbeelding is te groot. Kies een bestand kleiner dan ${maxSizeInMb} MB.`);
+                return;
+            }
 
             const preview = document.getElementById('scan-preview-img');
             const loading = document.getElementById('scan-loading');
             const resultCard = document.getElementById('scan-result');
+            const notice = document.getElementById('scan-notice');
 
             preview.src = URL.createObjectURL(file);
             preview.style.display = 'block';
             loading.style.display = 'block';
             resultCard.style.display = 'none';
+            notice.style.display = 'block';
 
             setTimeout(() => {
                 loading.style.display = 'none';
-                let detected = fishDatabase[Math.floor(Math.random() * fishDatabase.length)];
+                const detected = fishDatabase[getDeterministicDemoIndex(file.name)];
 
-                document.getElementById('scan-fish-name').innerText = `🔍 Herkend: ${detected.name}`;
+                document.getElementById('scan-fish-name').innerText = `⚠️ Demo-voorspelling: ${detected.name}`;
                 document.getElementById('scan-fish-size').innerText = detected.min;
                 document.getElementById('scan-fish-closed').innerText = detected.closed;
-                document.getElementById('scan-fish-tip').innerText = detected.tip;
+                document.getElementById('scan-fish-tip').innerText = `${detected.tip} Controleer altijd handmatig de soort en regels.`;
 
                 resultCard.style.display = 'block';
             }, 1200);
