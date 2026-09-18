@@ -154,3 +154,20 @@ button.retry-btn {
     font-size: 14px;
     color: #94a3b8;
 }
+/* Zorg dat de Mac/Chrome browser de volledige schermhoogte benut */
+html, body {
+    height: 100vh !important;
+    width: 100vw !important;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background-color: var(--bg-main, #0f172a);
+}
+
+/* Forceer de kaart om ruimte in te nemen tussen de controls en het dashboard */
+#map {
+    flex: 1 1 auto !important;
+    min-height: 50vh !important;
+    width: 100% !important;
+    background: #1e293b; /* Donkere achtergrond tijdens het laden van tegels */
+}
