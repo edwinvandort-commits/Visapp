@@ -460,11 +460,108 @@
                 .catch(() => {});
         }
 
+        function formatWindDirection(deg) {
+            if (deg === undefined || deg === null || Number.isNaN(Number(deg))) return 'onbekend';
+            const directions = ['N', 'NO', 'O', 'ZO', 'Z', 'ZW', 'W', 'NW'];
+            const index = Math.round(((Number(deg) % 360) / 45)) % directions.length;
+            return directions[index];
+        }
+
+        function getPressureState(pressure) {
+            if (pressure >= 1025) return 'hoog';
+            if (pressure <= 1005) return 'laag';
+            return 'rustig';
+        }
+
+        function getSunPhase(date, sunrise, sunset) {
+            if (!sunrise || !sunset) return 'overdag';
+            const now = new Date(date);
+            const sunriseDate = new Date(sunrise);
+            const sunsetDate = new Date(sunset);
+
+            if (now < sunriseDate) return 'voor zonsopkomst';
+            if (now > sunsetDate) return 'na zonsondergang';
+            return 'overdag';
+        }
+
+        function getWaterClarity(windSpeed, waterType) {
+            if (windSpeed >= 25) return 'matig';
+            if (waterType === 'river' || waterType === 'canal') return 'matig';
+            return 'goed';
+        }
+
+        function getDepthHint(waterType) {
+            if (waterType === 'river' || waterType === 'canal') return '1–6 meter, afhankelijk van stroming';
+            if (waterType === 'lake' || waterType === 'pond') return '0.5–4 meter';
+            return '0.5–5 meter';
+        }
+
+        function buildSpeciesAdvice(fishName, season, temp, windSpeed, windDirection, pressure, sunrise, sunset, waterType) {
+            const fish = (fishName || '').toLowerCase();
+            const phase = getSunPhase(new Date(), sunrise, sunset);
+            const depthHint = getDepthHint(waterType);
+            const clarity = getWaterClarity(windSpeed, waterType);
+            const windDir = formatWindDirection(windDirection);
+            const pressureState = getPressureState(pressure);
+
+            let base = `Controleer altijd de officiële viswater- en vergunningregels voor deze locatie.`;
+
+            if (fish.includes('snoek') || fish.includes('snoekbaars')) {
+                base = `Roofvis is het best actief bij ${phase === 'overdag' ? 'lichte stroming en rustige, goed verlichte randen' : 'dus een zachte ochtend- of avondactiviteit'}; focus op schaduwzones, steigers, brugpijlers en stroomranden.`;
+            } else if (fish.includes('baars')) {
+                base = `Baars is het meest kansrijk bij een lichte wind, duidelijke hoeksteken en een rustige waterlaag; werk richting oeverstructuren, kades en plantenranden.`;
+            } else if (fish.includes('brasem') || fish.includes('voorn') || fish.includes('zeelt')) {
+                base = `Witvis is meestal best actief op rustige, heldere waterzones met een stabiele bodem; kies lokaal rustige waterpartijen en feeder of dobberstation.`;
+            } else if (fish.includes('karper') || fish.includes('spiegel') || fish.includes('graskarper')) {
+                base = `Karper is het vaakst te vinden in rustige, zachte zones met vaste stekken en dieper water; werk vooral bij een stabiele druk en rustige wijken.`;
+            } else if (fish.includes('forel')) {
+                base = `Forel is meestal beter bij koel water, rustige zones en een lichte stroming; concentreer je op diepte- en stroomovergangen.`;
+            } else if (fish.includes('paling')) {
+                base = `Paling is sterk beschermd in Nederland; controleer expliciet de actuele wetgeving en pas je plan aan op beschermde zones.`;
+            }
+
+            return `${base} De huidige omstandigheden: ${temp}°C, ${windSpeed} km/u wind ${windDir}, luchtdruk ${pressure} hPa (${pressureState}), waterhelderheid ${clarity}, diepte ${depthHint}. Controleer daarnaast altijd de actuele gesloten gebieden, seizoenbeperkingen en water-/vergunningsregels.`;
+        }
+
+        function extractWaterMeta(waterData, windSpeed) {
+            let waterName = 'Onbekend water';
+            let waterType = 'binnenwater';
+
+            if (waterData && waterData.elements) {
+                for (const el of waterData.elements) {
+                    if (el && el.tags) {
+                        if (el.tags.name) waterName = el.tags.name;
+                        if (el.tags.waterway) waterType = el.tags.waterway;
+                        else if (el.tags.water) waterType = el.tags.water;
+                    }
+                }
+            }
+
+            const cleanedName = waterName && waterName !== 'Onbekend water' ? waterName : 'Gekozen locatie';
+            const clarity = getWaterClarity(windSpeed, waterType);
+            const depthHint = getDepthHint(waterType);
+
+            let vispasStatus = '📘 Controleer de verplichte viswater-/vergunningsregel voor deze locatie.';
+            if (waterType === 'river' || waterType === 'canal') {
+                vispasStatus = '📘 Landelijke VISpas / waterstatus: controleer of dit water binnen de VISpas valt en of er regionale of lokale beperkingen gelden.';
+            } else if (waterType === 'lake' || waterType === 'pond') {
+                vispasStatus = '📙 Watertype lijkt meer op stille water / polder of vereniging; controleer de lokale regels en eventuele gesloten gebieden.';
+            }
+
+            return {
+                waterName: cleanedName,
+                waterType,
+                clarity,
+                depthHint,
+                vispasStatus
+            };
+        }
+
         function analyzeWaterAndWeather(lat, lng) {
             const infoBox = document.getElementById('water-info');
             const recBox = document.getElementById('recommendation-info');
             
-            infoBox.innerHTML = `⏳ Water & Visrecht analyseren...`;
+            infoBox.innerHTML = `⏳ Water & visrecht analyseren...`;
             recBox.innerHTML = `⏳ Live weer & visadvies berekenen...`;
 
             const month = new Date().getMonth() + 1; 
@@ -474,73 +571,43 @@
             else if (month >= 9 && month <= 11) season = "Najaar";
             else season = "Winter";
 
-            const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,wind_speed_10m,surface_pressure`;
-            fetch(weatherUrl)
-                .then(r => r.json())
-                .then(weatherData => {
-                    const temp = weatherData.current.temperature_2m;
-                    const wind = Math.round(weatherData.current.wind_speed_10m);
-                    const pressure = Math.round(weatherData.current.surface_pressure);
-
-                    let advice = "";
-                    if (season === "Winter") {
-                        advice = `❄️ <b>Winteradvies (${temp}°C):</b> Vissen liggen op de diepste punten of in rustige havens. Target <b>Snoek met doodaas</b> op de bodem of visserij met de juiste diepte.`;
-                    } else if (season === "Voorjaar") {
-                        advice = `🌸 <b>Voorjaarsadvies (${temp}°C):</b> Vissen trekken naar de ondieptes om op te warmen en te paaien. Let op de gesloten tijd voor kunstaas/roofvis, afhankelijk van water en visrecht.`;
-                    } else if (season === "Zomer") {
-                        if (temp > 22) {
-                            advice = `☀️ <b>Zomeradvies (${temp}°C):</b> Warm water bevat minder zuurstof. Zoek stromend water bij stuwen/sluizen of vis in de vroege ochtend.`;
-                        } else {
-                            advice = `🌿 <b>Zomeradvies (${temp}°C):</b> Hoge activiteit! Vis langs dichte plantenbedden en lelies op <b>Baars</b> en <b>Voorn</b>, of 's avonds op <b>Snoekbaars</b>.`;
-                        }
-                    } else if (season === "Najaar") {
-                        advice = `🍂 <b>Najaarsadvies (${temp}°C):</b> Najaars-vreetfeest! Vissen bouwen winterreserves op. Dit is vaak dé tijd voor grote <b>Snoek</b> en <b>Snoekbaars</b> met grote aassoorten.`;
-                    }
-
-                    recBox.innerHTML = `<b>Seizoen: ${season}</b><br>${advice}<br><small style="color:#7f8c8d;">Weer: ${temp}°C | Wind: ${wind} km/u | Luchtdruk: ${pressure} hPa</small>`;
-                })
-                .catch(() => {
-                    recBox.innerHTML = `<b>Seizoen: ${season}</b><br>💡 Geen live weerdata beschikbaar. Vis aan de hand van de gekozen vissoort-tips.`;
-                });
-
-            const waterQuery = `[out:json][timeout:5];
-                (
+            const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,wind_speed_10m,wind_direction_10m,surface_pressure&daily=sunrise,sunset&timezone=auto`;
+            const waterQuery = `[out:json][timeout:5];(
                   way(around:150,${lat},${lng})["waterway"];
                   way(around:150,${lat},${lng})["natural"="water"];
                   relation(around:150,${lat},${lng})["natural"="water"];
-                );
-                out tags;`;
+                ); out tags;`;
 
-            fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(waterQuery)}`)
-                .then(r => r.json())
-                .then(waterData => {
-                    let waterName = "";
-                    let waterType = "binnenwater";
+            const weatherPromise = fetch(weatherUrl).then(r => {
+                if (!r.ok) throw new Error('Weather fetch failed');
+                return r.json();
+            }).catch(() => null);
 
-                    if (waterData.elements && waterData.elements.length > 0) {
-                        for (let el of waterData.elements) {
-                            if (el.tags) {
-                                if (el.tags.name) waterName = el.tags.name;
-                                if (el.tags.waterway) waterType = el.tags.waterway;
-                                else if (el.tags.water) waterType = el.tags.water;
-                                if (waterName) break;
-                            }
-                        }
-                    }
+            const waterPromise = fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(waterQuery)}`).then(r => {
+                if (!r.ok) throw new Error('Water fetch failed');
+                return r.json();
+            }).catch(() => null);
 
-                    if (!waterName) {
-                        waterName = `Gedetecteerd Water (${waterType})`;
-                    }
+            Promise.all([weatherPromise, waterPromise]).then(([weatherData, waterData]) => {
+                const current = weatherData && weatherData.current ? weatherData.current : {};
+                const daily = weatherData && weatherData.daily ? weatherData.daily : {};
+                const temp = current.temperature_2m ?? 15;
+                const wind = Math.round(current.wind_speed_10m ?? 0);
+                const windDir = current.wind_direction_10m ?? 0;
+                const pressure = Math.round(current.surface_pressure ?? 1015);
+                const sunrise = daily.sunrise && daily.sunrise.length ? daily.sunrise[0] : null;
+                const sunset = daily.sunset && daily.sunset.length ? daily.sunset[0] : null;
+                const waterMeta = extractWaterMeta(waterData, wind);
+                const speciesAdvice = buildSpeciesAdvice(currentSelectedFish, season, temp, wind, windDir, pressure, sunrise, sunset, waterMeta.waterType);
 
-                    let vispasStatus = (waterType === "river" || waterType === "canal" || waterName.toLowerCase().includes("kanaal") || waterName.toLowerCase().includes("rivier")) 
-                        ? "📘 **Landelijke VISpas:** Grote vaarweg/kanaal (meestal in de VISpas)."
-                        : "📙 **Verenigingswater / Polder:** Waarschijnlijk HSV vergunning of aanvullende toestemming vereist.";
+                recBox.innerHTML = `<b>Seizoen: ${season}</b><br>${speciesAdvice}<br><small style="color:#7f8c8d;">Temp: ${temp}°C | Wind: ${wind} km/u (${formatWindDirection(windDir)}) | Luchtdruk: ${pressure} hPa | Zonsopgang: ${sunrise ? new Date(sunrise).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' }) : 'n/b'} | Zonsondergang: ${sunset ? new Date(sunset).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' }) : 'n/b'}</small>`;
 
-                    infoBox.innerHTML = `<b>📍 ${waterName}</b><br>${vispasStatus}`;
-                })
-                .catch(() => {
-                    infoBox.innerHTML = `<b>📍 Gekozen Locatie (${lat.toFixed(4)}, ${lng.toFixed(4)})</b><br>📘 Controleer de exacte vergunning in de VISplanner app.`;
-                });
+                infoBox.innerHTML = `<b>📍 ${waterMeta.waterName}</b><br>💧 Water: ${waterMeta.waterType} | Diepte: ${waterMeta.depthHint} | Helderheid: ${waterMeta.clarity}<br>${waterMeta.vispasStatus}`;
+            }).catch(() => {
+                const fallbackAdvice = `Gebaseerd op seizoen en gekozen vissoort: ${currentSelectedFish}. Controleer altijd actuele regels, gesloten gebieden en lokale waterstatus voor deze plek.`;
+                recBox.innerHTML = `<b>Seizoen: ${season}</b><br>${fallbackAdvice}<br><small style="color:#7f8c8d;">Live weersdata is tijdelijk niet beschikbaar. Controleer de actuele waterstatus handmatig.</small>`;
+                infoBox.innerHTML = `<b>📍 Gekozen Locatie (${lat.toFixed(4)}, ${lng.toFixed(4)})</b><br>📘 Controleer de exacte vergunning in de VISplanner app en de lokale regels.`;
+            });
         }
 
         function searchLocation() {
