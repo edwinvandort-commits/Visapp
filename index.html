@@ -28,6 +28,41 @@
             height: 100vh;
         }
 
+        #controls-bar {
+            background: #1e293b;
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: #cbd5e1;
+        }
+
+        select {
+            background: #0f172a;
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        #status-bar {
+            background: #0f172a;
+            color: #94a3b8;
+            padding: 3px 12px;
+            font-size: 11px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
         #map {
             flex: 1;
             width: 100%;
@@ -58,6 +93,14 @@
             color: var(--accent-blue);
         }
 
+        .badge-orange {
+            color: var(--accent-orange);
+            border: 1px solid rgba(251, 146, 60, 0.4);
+            background: rgba(251, 146, 60, 0.05);
+            font-size: 10px;
+            font-weight: 600;
+        }
+
         .warning-box {
             background: #451a1a;
             border: 1px solid #7f1d1d;
@@ -74,6 +117,14 @@
             color: #cbd5e1;
         }
 
+        .unavailable-list {
+            color: #64748b;
+            font-size: 11px;
+            margin-top: 6px;
+            border-top: 1px dashed var(--border-color);
+            padding-top: 4px;
+        }
+
         button.retry-btn {
             background: var(--accent-blue);
             color: #0f172a;
@@ -88,19 +139,42 @@
 </head>
 <body>
 
+    <div id="controls-bar">
+        <div class="control-group">
+            <label for="species-select">🐟 Vissoort:</label>
+            <select id="species-select">
+                <option value="snoekbaars" selected>Snoekbaars</option>
+                <option value="snoek">Snoek</option>
+                <option value="baars">Baars</option>
+                <option value="karper">Karper</option>
+                <option value="witvis">Witvis / Brasem</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="season-select">🍂 Seizoen:</label>
+            <select id="season-select">
+                <option value="herfst" selected>Herfst</option>
+                <option value="winter">Winter</option>
+                <option value="voorjaar">Voorjaar</option>
+                <option value="zomer">Zomer</option>
+            </select>
+        </div>
+    </div>
+
+    <div id="status-bar">Status: Kaart laden...</div>
     <div id="map"></div>
 
     <div id="dashboard">
         <div id="dashboard-content">
             <p style="margin:0; font-size:14px; color:#94a3b8;">
-                Klik op een water op de kaart om de <b>Indicatieve weerscore</b> en locatie-adviezen te bekijken.
+                Klik op een water op de kaart in Nederland om het <b>Gedetailleerd Visadvies</b> en de <b>Indicatieve Weerscore</b> te bekijken.
             </p>
         </div>
     </div>
 
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <!-- Onze logica -->
     <script src="app.js"></script>
 </body>
 </html>
