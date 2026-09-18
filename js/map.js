@@ -8,7 +8,9 @@ let hotspotMarkers = [];
 export function initMap(initialLat, initialLng, onLocationSelect) {
     if (map) return map;
 
+    // Gebruik betrouwbare HTTPS tegel-servers
     const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
+        maxZoom: 19,
         attribution: '© OpenStreetMap' 
     });
 
@@ -46,10 +48,11 @@ export function initMap(initialLat, initialLng, onLocationSelect) {
         await processLocationChange(lat, lng, onLocationSelect);
     });
 
-    // FIX: Dwing Leaflet om de container-grootte opnieuw te berekenen zodra de DOM klaar is
+    // Forceer Leaflet om direct en na korte vertraging de maten opnieuw te berekenen
+    map.invalidateSize();
     setTimeout(() => {
-        map.invalidateSize();
-    }, 250);
+        if (map) map.invalidateSize();
+    }, 300);
 
     return map;
 }
@@ -66,17 +69,32 @@ export function centerMap(lat, lng, zoom = 13) {
     if (map) {
         map.setView([lat, lng], zoom);
         setUserMarker(lat, lng);
-        // Extra afmetingen-check bij centreren
         setTimeout(() => map.invalidateSize(), 100);
     }
 }
 
 export async function processLocationChange(lat, lng, callback) {
-    // Haal parallel waternodes en weerdata op
-    const [nodes, weather] = await Promise.all([
-        fetchWaterNodes(lat, lng),
-        getWeatherData(lat, lng)
-    ]);
+    let nodes = [];
+    let weather = null;
+
+    // Gebruik try-catch zodat een vastlopende API de kaart niet blokkeert
+    try {
+        const fetchPromise = Promise.all([
+            fetchWaterNodes(lat, lng),
+            getWeatherData(lat, lng)
+        ]);
+
+        // Maximaal 3 seconden wachten op API's, anders doorgaan
+        const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error("Timeout")), 3000)
+        );
+
+        const results = await Promise.race([fetchPromise, timeoutPromise]);
+        nodes = results[0] || [];
+        weather = results[1] || null;
+    } catch (err) {
+        console.warn("API ophalen duurde te lang of gaf fout, vallen terug op basisdata:", err);
+    }
 
     let mainWater = nodes.find(e => e.tags && (e.tags.waterway || e.tags.natural === 'water'));
     let waterType = mainWater ? (mainWater.tags.waterway || mainWater.tags.natural) : 'water';
@@ -104,7 +122,7 @@ function renderHotspotMarkers(nodes, lat, lng) {
     hotspotMarkers.forEach(m => map.removeLayer(m));
     hotspotMarkers = [];
 
-    if (nodes.length > 0) {
+    if (nodes && nodes.length > 0) {
         let count = 0;
         nodes.forEach(el => {
             if (count >= 5) return;
