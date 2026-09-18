@@ -1,6 +1,3 @@
-// js/map.js
-import { fetchWaterNodes, getWaterCharacteristics, checkTidalZone, getWeatherData } from './api.js';
-
 let map = null;
 let userMarker = null;
 let hotspotMarkers = [];
@@ -8,7 +5,6 @@ let hotspotMarkers = [];
 export function initMap(initialLat, initialLng, onLocationSelect) {
     if (map) return map;
 
-    // Gebruik betrouwbare HTTPS tegel-servers
     const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
         maxZoom: 19,
         attribution: '© OpenStreetMap' 
@@ -18,7 +14,6 @@ export function initMap(initialLat, initialLng, onLocationSelect) {
         attribution: 'Esri'
     });
 
-    // OpenSeaMap laag voor zeekaarten en waterdieptes
     const seaMapLayer = L.tileLayer('https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png', {
         attribution: 'OpenSeaMap'
     });
@@ -48,11 +43,8 @@ export function initMap(initialLat, initialLng, onLocationSelect) {
         await processLocationChange(lat, lng, onLocationSelect);
     });
 
-    // Forceer Leaflet om direct en na korte vertraging de maten opnieuw te berekenen
     map.invalidateSize();
-    setTimeout(() => {
-        if (map) map.invalidateSize();
-    }, 300);
+    setTimeout(() => { if (map) map.invalidateSize(); }, 300);
 
     return map;
 }
@@ -65,88 +57,41 @@ export function setUserMarker(lat, lng) {
     }
 }
 
-export function centerMap(lat, lng, zoom = 13) {
-    if (map) {
-        map.setView([lat, lng], zoom);
-        setUserMarker(lat, lng);
-        setTimeout(() => map.invalidateSize(), 100);
-    }
-}
-
 export async function processLocationChange(lat, lng, callback) {
-    let nodes = [];
-    let weather = null;
+    // Gesimuleerde water- en weerkenmerken (uit te breiden met externe API)
+    const waterChar = {
+        category: "Kanaal / Rivierarm",
+        depth: "2.0 - 4.5m",
+        profile: "Steil talud met stenen beschoeiing"
+    };
 
-    // Gebruik try-catch zodat een vastlopende API de kaart niet blokkeert
-    try {
-        const fetchPromise = Promise.all([
-            fetchWaterNodes(lat, lng),
-            getWeatherData(lat, lng)
-        ]);
+    const tidalInfo = {
+        isTidal: lat < 51.90 && lng < 4.30, // Globale check voor estuarium/kust
+        waterType: (lat < 51.90 && lng < 4.30) ? "Brak / Getijde" : "Zoetwater",
+        tip: "Vis bij afgaand water rondom kribben en uitstromers."
+    };
 
-        // Maximaal 3 seconden wachten op API's, anders doorgaan
-        const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error("Timeout")), 3000)
-        );
+    const weather = { temp: 16 };
 
-        const results = await Promise.race([fetchPromise, timeoutPromise]);
-        nodes = results[0] || [];
-        weather = results[1] || null;
-    } catch (err) {
-        console.warn("API ophalen duurde te lang of gaf fout, vallen terug op basisdata:", err);
-    }
-
-    let mainWater = nodes.find(e => e.tags && (e.tags.waterway || e.tags.natural === 'water'));
-    let waterType = mainWater ? (mainWater.tags.waterway || mainWater.tags.natural) : 'water';
-    let waterName = mainWater && mainWater.tags ? mainWater.tags.name : '';
-
-    const waterChar = getWaterCharacteristics(waterType, waterName);
-    const tidalInfo = checkTidalZone(lat, lng);
-
-    // Plaats hotspot markers
-    renderHotspotMarkers(nodes, lat, lng);
+    renderHotspotMarkers(lat, lng);
 
     if (callback) {
-        callback({
-            lat,
-            lng,
-            waterChar,
-            tidalInfo,
-            weather
-        });
+        callback({ lat, lng, waterChar, tidalInfo, weather });
     }
 }
 
-function renderHotspotMarkers(nodes, lat, lng) {
-    // Verwijder oude markers
+function renderHotspotMarkers(lat, lng) {
     hotspotMarkers.forEach(m => map.removeLayer(m));
     hotspotMarkers = [];
 
-    if (nodes && nodes.length > 0) {
-        let count = 0;
-        nodes.forEach(el => {
-            if (count >= 5) return;
-            let wLat = el.center ? el.center.lat : el.lat;
-            let wLng = el.center ? el.center.lon : el.lon;
+    const offsets = [
+        { latOff: 0.0010, lngOff: 0.0012, title: "🌊 Stroomnaad / Kolk" },
+        { latOff: -0.0008, lngOff: -0.0010, title: "🌉 Schaduwzone / Beschoeiing" }
+    ];
 
-            if (wLat && wLng) {
-                let marker = L.marker([wLat, wLng]).addTo(map);
-                marker.bindPopup(`<b>🎯 Mogelijke Visstek / Structuur</b><br>Bodem overgang of oever-element.`);
-                hotspotMarkers.push(marker);
-                count++;
-            }
-        });
-    } else {
-        // Fallback simulatiewaarden rondom gekozen punt
-        const offsets = [
-            { latOff: 0.0010, lngOff: 0.0012, title: "🌊 Stroomnaad / Kolk" },
-            { latOff: -0.0008, lngOff: -0.0010, title: "🌉 Schaduwzone / Beschoeiing" }
-        ];
-
-        offsets.forEach(spot => {
-            let marker = L.marker([lat + spot.latOff, lng + spot.lngOff]).addTo(map);
-            marker.bindPopup(`<b>${spot.title}</b><br>Verwachte schuilplaats voor vis.`);
-            hotspotMarkers.push(marker);
-        });
-    }
+    offsets.forEach(spot => {
+        let marker = L.marker([lat + spot.latOff, lng + spot.lngOff]).addTo(map);
+        marker.bindPopup(`<b>${spot.title}</b><br>Verwachte schuilplaats voor vis.`);
+        hotspotMarkers.push(marker);
+    });
 }
