@@ -1,137 +1,127 @@
-import { getWaterInfo, fetchWeatherData, fetchWaterStructures } from './api.js';
-import { calculateIndicativeScore, generateZoneAdvice } from './advice.js';
-import { setStatus, renderDashboard, renderOfflineFallback, saveStateToStorage } from './ui.js';
+// js/map.js
+import { fetchWaterNodes, getWaterCharacteristics, checkTidalZone, getWeatherData } from './api.js';
 
-let map, markerGroup;
-let requestDebounceTimer = null;
-let lastClickedCoords = null;
+let map = null;
+let userMarker = null;
+let hotspotMarkers = [];
 
-document.addEventListener("DOMContentLoaded", () => {
-    setStatus("Kaart initialiseren...");
-    map = L.map('map').setView([52.0907, 5.1214], 12);
+export function initMap(initialLat, initialLng, onLocationSelect) {
+    if (map) return map;
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap'
-    }).addTo(map);
+    const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
+        attribution: '© OpenStreetMap' 
+    });
 
-    markerGroup = L.layerGroup().addTo(map);
+    const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Esri'
+    });
 
-    map.on('click', handleMapClick);
-    map.on('moveend', handleMapMoveEnd);
+    // OpenSeaMap laag voor zeekaarten en waterdieptes
+    const seaMapLayer = L.tileLayer('https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png', {
+        attribution: 'OpenSeaMap'
+    });
 
-    document.getElementById('species-select').addEventListener('change', refreshCurrentAnalysis);
-    document.getElementById('season-select').addEventListener('change', refreshCurrentAnalysis);
+    map = L.map('map', { 
+        zoomControl: true,
+        layers: [osmLayer]
+    }).setView([initialLat, initialLng], 12);
 
-    setStatus("Gereed. Klik op een willekeurig water in Nederland.");
-});
+    const baseMaps = {
+        "🗺️ Standaard Kaart": osmLayer,
+        "🛰️ Satellietkaart": satelliteLayer
+    };
 
-function refreshCurrentAnalysis() {
-    if (lastClickedCoords) {
-        handleMapClick({ latlng: lastClickedCoords });
-    }
-}
+    const overlayMaps = {
+        "🌊 Diepte & Navigatie (OpenSeaMap)": seaMapLayer
+    };
 
-async function handleMapClick(e) {
-    const { lat, lng } = e.latlng;
-    lastClickedCoords = e.latlng;
+    L.control.layers(baseMaps, overlayMaps, { position: 'topright' }).addTo(map);
 
-    const dashboard = document.getElementById('dashboard-content');
-    
-    if (!navigator.onLine) {
-        renderOfflineFallback(dashboard);
-        return;
-    }
-
-    const species = document.getElementById('species-select').value;
-    const season = document.getElementById('season-select').value;
-
-    try {
-        setStatus("Waterzone in Nederland zoeken...");
-        dashboard.innerHTML = "⏳ Analyse uitvoeren voor gekozen vissoort & locatie...";
-
-        const zone = await getWaterInfo(lat, lng);
-
-        if (!zone.isNL) {
-            setStatus("Locatie buiten Nederland.");
-            dashboard.innerHTML = `
-                <div class="warning-box">
-                    ⚠️ Deze locatie ligt buiten Nederland. Deze applicatie ondersteunt alleen Nederlandse wateren.
-                </div>
-            `;
-            return;
-        }
-
-        setStatus("Weerscore & adviezen berekenen...");
-        const weather = await fetchWeatherData(lat, lng);
-        const scoreData = calculateIndicativeScore(weather);
-        const advices = generateZoneAdvice(zone, weather, species, season);
-
-        saveStateToStorage({ zone, weather, scoreData, advices, species, season });
-
-        renderDashboard(dashboard, zone, scoreData, weather, advices, lat, lng, species, season);
-        setStatus("Gereed.");
-
-    } catch (error) {
-        console.error(error);
-        setStatus("Fout bij ophalen gegevens.");
-        dashboard.innerHTML = `
-            <div class="warning-box">
-                ❌ Fout bij ophalen gegevens (${error.message}).<br>
-                <button class="retry-btn" onclick="location.reload()">Opnieuw proberen</button>
-            </div>
-        `;
-    }
-}
-
-function handleMapMoveEnd() {
-    clearTimeout(requestDebounceTimer);
-    requestDebounceTimer = setTimeout(async () => {
-        const zoom = map.getZoom();
-        if (zoom < 14) {
-            markerGroup.clearLayers();
-            setStatus("Inzoomen om structuren te zien (zoom >= 14)");
-            return;
-        }
+    // Kaartklik event
+    map.on('click', async (e) => {
+        const lat = e.latlng.lat;
+        const lng = e.latlng.lng;
         
-        try {
-            setStatus("Potentiële structuren laden...");
-            const data = await fetchWaterStructures(map.getBounds());
-            
-            markerGroup.clearLayers();
-            const clusters = {};
+        setUserMarker(lat, lng);
+        await processLocationChange(lat, lng, onLocationSelect);
+    });
 
-            data.elements.forEach(el => {
-                const lat = el.lat || (el.center && el.center.lat);
-                const lon = el.lon || (el.center && el.center.lon);
-                if (!lat || !lon) return;
+    return map;
+}
 
-                const key = `${lat.toFixed(3)}_${lon.toFixed(3)}`;
-                if (!clusters[key]) {
-                    clusters[key] = { lat, lon, count: 0, types: new Set() };
-                }
-                clusters[key].count++;
-                clusters[key].types.add(el.tags.bridge ? "Brug" : "Stuw");
-            });
+export function setUserMarker(lat, lng) {
+    if (userMarker) {
+        userMarker.setLatLng([lat, lng]);
+    } else if (map) {
+        userMarker = L.marker([lat, lng]).addTo(map);
+    }
+}
 
-            Object.values(clusters).forEach(c => {
-                const marker = L.circleMarker([c.lat, c.lon], {
-                    radius: Math.min(6 + c.count, 12),
-                    fillColor: "#fb923c",
-                    color: "#ffffff",
-                    weight: 1,
-                    fillOpacity: 0.8
-                });
-                marker.bindPopup(`<b>Potentiële structuur (${Array.from(c.types).join(', ')})</b><br>Aantal in cluster: ${c.count}`);
-                markerGroup.addLayer(marker);
-            });
+export function centerMap(lat, lng, zoom = 13) {
+    if (map) {
+        map.setView([lat, lng], zoom);
+        setUserMarker(lat, lng);
+    }
+}
 
-            setStatus("Gereed.");
+export async function processLocationChange(lat, lng, callback) {
+    // Haal parallel waternodes en weerdata op
+    const [nodes, weather] = await Promise.all([
+        fetchWaterNodes(lat, lng),
+        getWeatherData(lat, lng)
+    ]);
 
-        } catch (err) {
-            if (err.name !== 'AbortError') {
-                console.warn("Fout bij laden structuren:", err);
-                setStatus("Fout bij laden structuren.");
+    let mainWater = nodes.find(e => e.tags && (e.tags.waterway || e.tags.natural === 'water'));
+    let waterType = mainWater ? (mainWater.tags.waterway || mainWater.tags.natural) : 'water';
+    let waterName = mainWater && mainWater.tags ? mainWater.tags.name : '';
+
+    const waterChar = getWaterCharacteristics(waterType, waterName);
+    const tidalInfo = checkTidalZone(lat, lng);
+
+    // Plaats hotspot markers
+    renderHotspotMarkers(nodes, lat, lng);
+
+    if (callback) {
+        callback({
+            lat,
+            lng,
+            waterChar,
+            tidalInfo,
+            weather
+        });
+    }
+}
+
+function renderHotspotMarkers(nodes, lat, lng) {
+    // Verwijder oude markers
+    hotspotMarkers.forEach(m => map.removeLayer(m));
+    hotspotMarkers = [];
+
+    if (nodes.length > 0) {
+        let count = 0;
+        nodes.forEach(el => {
+            if (count >= 5) return;
+            let wLat = el.center ? el.center.lat : el.lat;
+            let wLng = el.center ? el.center.lon : el.lon;
+
+            if (wLat && wLng) {
+                let marker = L.marker([wLat, wLng]).addTo(map);
+                marker.bindPopup(`<b>🎯 Mogelijke Visstek / Structuur</b><br>Bodem overgang of oever-element.`);
+                hotspotMarkers.push(marker);
+                count++;
             }
-        }
-    }, 400);
+        });
+    } else {
+        // Fallback simulatiewaarden rondom gekozen punt
+        const offsets = [
+            { latOff: 0.0010, lngOff: 0.0012, title: "🌊 Stroomnaad / Kolk" },
+            { latOff: -0.0008, lngOff: -0.0010, title: "🌉 Schaduwzone / Beschoeiing" }
+        ];
+
+        offsets.forEach(spot => {
+            let marker = L.marker([lat + spot.latOff, lng + spot.lngOff]).addTo(map);
+            marker.bindPopup(`<b>${spot.title}</b><br>Verwachte schuilplaats voor vis.`);
+            hotspotMarkers.push(marker);
+        });
+    }
 }
