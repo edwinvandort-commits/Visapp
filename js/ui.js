@@ -1,90 +1,142 @@
-const STORAGE_KEY = "smartwater_last_state";
+// js/ui.js
+import { speciesData, getSolunarData, calculateWaterTemp, getSpeciesEcoRules, getCurrentSeason } from './advice.js';
 
-export function setStatus(text) {
-    const el = document.getElementById('status-bar');
-    if (el) el.innerText = `Status: ${text}`;
-}
+export function setupUI(onCategoryChange, onSpeciesChange, onSearch) {
+    // Nachtstand toggle
+    const nightBtn = document.getElementById('btn-night');
+    if (nightBtn) {
+        nightBtn.addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+        });
+    }
 
-export function renderDashboard(container, zone, scoreData, weather, advices, lat, lng, species, season) {
-    const visplannerUrl = `https://www.visplanner.nl/?lat=${lat}&lng=${lng}`;
+    // Zoekbalk event
+    const searchBtn = document.getElementById('search-btn');
+    const searchInput = document.getElementById('search-input');
+    if (searchBtn && searchInput) {
+        searchBtn.addEventListener('click', () => onSearch(searchInput.value));
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') onSearch(searchInput.value);
+        });
+    }
 
-    let pressureDetails = weather.pressureTrend ? 
-        `Nu: ${weather.pressureTrend.now} hPa | -3u: ${weather.pressureTrend.p3} hPa (${weather.pressureTrend.diff3}) | -6u: ${weather.pressureTrend.p6} hPa (${weather.pressureTrend.diff6}) | -12u: ${weather.pressureTrend.p12} hPa (${weather.pressureTrend.diff12})` : 
-        "Druktrend niet beschikbaar — niet meegerekend";
-
-    let html = `
-        <h3 style="margin:0 0 6px 0;">📍 ${zone.name} <span class="badge">${species} • ${season}</span></h3>
-        
-        <a href="${visplannerUrl}" target="_blank" class="visplanner-btn">
-            📱 Check Juridische Status in VISplanner ➔
-        </a>
-
-        <div class="advice-card">
-            <strong>📊 Indicatieve weerscore: ${scoreData.finalScore !== null ? scoreData.finalScore : 'N/B'}</strong>
-            <div class="score-breakdown">
-                <strong>Beschikbaar: ${scoreData.availableComponents}</strong><br>
-                • Temperatuur: ${scoreData.breakdown.temperature ?? 'N/B'}<br>
-                • Wind: ${scoreData.breakdown.wind ?? 'N/B'}<br>
-                • Druktrend score: ${scoreData.breakdown.pressure}<br>
-                <small style="color:#94a3b8;">Drukverloop: ${pressureDetails}</small>
-                
-                <div class="unavailable-list">
-                    ❌ <b>Niet beschikbaar / Niet meegerekend:</b><br>
-                    Watertemperatuur • Stromingssnelheid • Waterdoorzicht • Officiële diepte • Vangstdata • Regelgeving
-                </div>
-            </div>
-        </div>
-    `;
-
-    advices.forEach(adv => {
-        html += `
-            <div class="advice-card">
-                <strong>${adv.title}</strong>
-                <p style="margin:6px 0 8px 0; font-size:13px; line-height:1.5;">${adv.text}</p>
-                <span class="badge badge-orange">Indicatief — geen bewezen vangstplek</span>
-            </div>
-        `;
+    // Categorie knoppen
+    document.querySelectorAll('.btn-cat').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            document.querySelectorAll('.btn-cat').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const catKey = btn.dataset.cat;
+            renderSpeciesButtons(catKey, onSpeciesChange);
+            onCategoryChange(catKey);
+        });
     });
 
-    html += `<p style="font-size:11px; color:#94a3b8; margin-top:10px;">Visrecht status: <i>Visrecht niet vastgesteld door Visapp</i></p>`;
-
-    container.innerHTML = html;
+    // Dashboard Tabs
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            btn.classList.add('active');
+            const target = btn.dataset.tab;
+            const targetEl = document.getElementById(`tab-${target}`);
+            if (targetEl) targetEl.classList.add('active');
+        });
+    });
 }
 
-export function renderOfflineFallback(container) {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
-        container.innerHTML = `
-            <div class="warning-box">
-                📡 Offline — Geen netwerkverbinding en geen eerder opgeslagen gegevens beschikbaar.
-            </div>
-        `;
-        return;
+export function renderSpeciesButtons(catKey, onSpeciesChange) {
+    const speciesPanel = document.getElementById('sub-species-panel');
+    if (!speciesPanel) return;
+
+    speciesPanel.innerHTML = '';
+    const list = speciesData[catKey] || [];
+
+    list.forEach((fish, index) => {
+        const btn = document.createElement('button');
+        btn.className = 'btn-species' + (index === 0 ? ' active' : '');
+        btn.innerText = fish.name;
+        btn.onclick = () => {
+            document.querySelectorAll('.btn-species').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            onSpeciesChange(fish);
+        };
+        speciesPanel.appendChild(btn);
+    });
+
+    if (list.length > 0) {
+        onSpeciesChange(list[0]);
     }
-    const last = JSON.parse(raw);
-    setStatus("Offline data geladen.");
-    container.innerHTML = `
-        <div class="warning-box warning-box-offline">
-            ⚠️ Offline — laatst bekende indicatieve informatie wordt gebruikt. Live data ontbreekt.<br>
-            <small>Opgeslagen op: ${new Date(last.timestamp).toLocaleString()}</small>
-        </div>
-    `;
-    renderDashboard(
-        container, 
-        last.zone, 
-        last.scoreData, 
-        last.weather, 
-        last.advices, 
-        last.zone.latitude || 52.09, 
-        last.zone.longitude || 5.12, 
-        last.species || "snoekbaars", 
-        last.season || "herfst"
-    );
 }
 
-export function saveStateToStorage(data) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({
-        ...data,
-        timestamp: new Date().toISOString()
-    }));
+/**
+ * Rendert het complete Fase 2 advies op het dashboard
+ */
+export function updateDashboardUI(fish, waterChar, tidalInfo, weatherData) {
+    const season = getCurrentSeason();
+    const solunar = getSolunarData();
+    const waterTemp = calculateWaterTemp(weatherData.temp, season);
+    const ecoRules = getSpeciesEcoRules(fish.key || fish.name.toLowerCase(), season);
+
+    // Dynamic Title
+    const titleEl = document.getElementById('fish-title');
+    if (titleEl) titleEl.innerText = `Advies: ${fish.name}`;
+
+    // 1. Hydrografie & Watertype
+    const hydroEl = document.getElementById('hydro-info');
+    if (hydroEl) {
+        hydroEl.innerHTML = `
+            • <b>Type:</b> ${waterChar.category} (${tidalInfo.waterType})<br>
+            • <b>Indicatieve Diepte:</b> ${waterChar.depth}<br>
+            • <b>Bodemprofiel:</b> ${waterChar.profile}
+        `;
+    }
+
+    // 2. Solunaire & Astronomische Piekuren
+    const solunarEl = document.getElementById('solunar-info');
+    if (solunarEl) {
+        solunarEl.innerHTML = `
+            • <b>Maanfase:</b> ${solunar.phaseName} (Dag ${solunar.moonAgeDays})<br>
+            • <b>Piekuren:</b> ${solunar.majorPeriods}<br>
+            • <b>Aasactiviteit Bonus:</b> +${solunar.scoreBonus}%
+        `;
+    }
+
+    // 3. Getijden & Estuarium
+    const tidalEl = document.getElementById('tidal-info');
+    if (tidalEl) {
+        if (tidalInfo.isTidal) {
+            tidalEl.style.display = 'block';
+            tidalEl.innerHTML = `<strong>🌊 Getijdenzone:</strong> ${tidalInfo.tip}`;
+        } else {
+            tidalEl.style.display = 'none';
+        }
+    }
+
+    // 4. Watertemperatuur & Zuurstof
+    const tempEl = document.getElementById('water-temp-info');
+    if (tempEl) {
+        tempEl.innerHTML = `
+            • <b>Lucht / Geschat Water:</b> ${weatherData.temp}°C / <b>${waterTemp.estimatedWaterTemp}°C</b><br>
+            • <b>Zuurstofgehalte:</b> ${waterTemp.oxygenStatus}
+        `;
+    }
+
+    // 5. Seizoen, Paaitijden & Ethisch Advies
+    const ecoEl = document.getElementById('eco-info');
+    if (ecoEl) {
+        let warningText = ecoRules.warning ? `<p style="color:#d35400; font-weight:bold; margin:2px 0;">${ecoRules.warning}</p>` : '';
+        ecoEl.innerHTML = `
+            ${warningText}
+            • <b>Minimale maat:</b> ${fish.min}<br>
+            • <b>Gesloten tijd:</b> ${fish.closed}<br>
+            • <b>Ethisch advies:</b> ${ecoRules.ethicsTip}
+        `;
+    }
+
+    // Aas & Hotspots
+    const tackleEl = document.getElementById('tackle-info');
+    if (tackleEl) tackleEl.innerText = fish.tackle;
+
+    const hotspotEl = document.getElementById('hotspot-info');
+    if (hotspotEl) hotspotEl.innerText = fish.hotspot;
 }
