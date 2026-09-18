@@ -58,6 +58,8 @@ select {
 #map {
     flex: 1;
     width: 100%;
+    min-height: 350px; /* Forceert een minimale hoogte voor Leaflet */
+    z-index: 1;
 }
 
 #dashboard {
