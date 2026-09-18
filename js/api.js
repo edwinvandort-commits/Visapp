@@ -1,112 +1,159 @@
-let overpassAbortController = null;
+// js/api.js
 
 /**
- * Haalt waterinformatie op van OpenStreetMap voor een specifieke GPS-locatie.
+ * Zoekt locaties op via Nominatim
  */
-export async function getWaterInfo(lat, lng) {
-    const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=16&addressdetails=1`;
-    
-    const response = await fetch(url, {
-        headers: { 'User-Agent': 'SmartWaterNL-App' }
-    });
-    
-    if (!response.ok) throw new Error("Locatie niet gevonden");
-    const data = await response.json();
-    const addr = data.address || {};
-
-    if (addr.country_code !== 'nl') {
-        return { isNL: false };
-    }
-
-    const waterName = data.namedetails?.name || 
-                      addr.natural || 
-                      addr.waterway || 
-                      addr.water || 
-                      addr.suburb || 
-                      addr.city_district || 
-                      addr.town || 
-                      addr.village || 
-                      "Nederlands Binnenwater";
-
-    const waterType = addr.waterway || addr.natural || "binnenwater";
-
-    return {
-        isNL: true,
-        id: `nl-${lat.toFixed(3)}-${lng.toFixed(3)}`,
-        name: waterName,
-        type: waterType,
-        depth: "1.0 - 3.5m (indicatief)",
-        distanceMeters: 0,
-        latitude: lat,
-        longitude: lng
-    };
-}
-
-/**
- * Haalt weer- en luchtdrukdata op van Open-Meteo op basis van coördinaten.
- */
-export async function fetchWeatherData(lat, lng) {
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,wind_speed_10m,surface_pressure&hourly=surface_pressure&forecast_days=2`;
-    
-    const response = await fetch(url);
-    if (!response.ok) throw new Error("Weer-API niet bereikbaar");
-    const data = await response.json();
-
-    const current = data.current;
-    const hourly = data.hourly;
-    
-    let pressureTrend = null;
-    if (hourly && hourly.surface_pressure && hourly.time) {
-        const nowTime = new Date(current.time).getTime();
-        const findPressureHoursAgo = (hours) => {
-            const targetTime = nowTime - (hours * 3600 * 1000);
-            const idx = hourly.time.findIndex(t => Math.abs(new Date(t).getTime() - targetTime) < 1800000);
-            return idx !== -1 ? hourly.surface_pressure[idx] : null;
-        };
-
-        const p3 = findPressureHoursAgo(3);
-        const p6 = findPressureHoursAgo(6);
-        const p12 = findPressureHoursAgo(12);
-
-        if (p3 !== null && p6 !== null && p12 !== null) {
-            pressureTrend = {
-                now: current.surface_pressure,
-                p3, p6, p12,
-                diff3: (current.surface_pressure - p3).toFixed(1),
-                diff6: (current.surface_pressure - p6).toFixed(1),
-                diff12: (current.surface_pressure - p12).toFixed(1)
+export async function searchLocation(query) {
+    if (!query) return null;
+    try {
+        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&countrycodes=nl&q=${encodeURIComponent(query)}`);
+        if (!response.ok) throw new Error("Netwerkfout bij zoeken");
+        const data = await response.json();
+        if (data && data.length > 0) {
+            return {
+                name: data[0].display_name.split(',')[0],
+                fullName: data[0].display_name,
+                lat: parseFloat(data[0].lat),
+                lng: parseFloat(data[0].lon)
             };
         }
+        return null;
+    } catch (err) {
+        console.error("Zoekfout:", err);
+        return null;
+    }
+}
+
+/**
+ * Punt 1: Geavanceerde Watertype-classificatie & Hydrografie
+ */
+export function getWaterCharacteristics(waterType, waterName) {
+    const nameLower = (waterName || "").toLowerCase();
+    const typeLower = (waterType || "").toLowerCase();
+
+    if (nameLower.includes("kanaal") || typeLower === "canal") {
+        return {
+            category: "Kanaal",
+            depth: "2.5m - 5.0m",
+            profile: "Strakke taluds, steenstort op de kanten, constante diepte in de vaargeul.",
+            tempSensitivity: "Gemiddeld",
+            oxygenLevel: "Goed (door scheepvaart en spuiing)"
+        };
+    } else if (nameLower.includes("plas") || nameLower.includes("meer") || nameLower.includes("kolk") || typeLower === "water") {
+        return {
+            category: "Plas / Zandafgraving",
+            depth: "3.0m - 15.0m+",
+            profile: "Steile taluds, diepe kuilen, ondiepe platen en thermocline (spronglaag) in de zomer.",
+            tempSensitivity: "Laag (warmt langzaam op, koelt langzaam af)",
+            oxygenLevel: "Seizoensafhankelijk (risico op zuurstofarm diep water in hoogzomer)"
+        };
+    } else if (nameLower.includes("polder") || nameLower.includes("wetering") || nameLower.includes("gracht") || typeLower === "ditch" || typeLower === "drain") {
+        return {
+            category: "Polder / Wetering",
+            depth: "0.8m - 1.8m",
+            profile: "Ondiep, drassige zachte bodem, dichte waterplanten- en rietkragen.",
+            tempSensitivity: "Zeer hoog (reageert direct op zon en nachtvorst)",
+            oxygenLevel: "Gevoelig voor stilstaand warm water"
+        };
+    } else if (nameLower.includes("rivier") || typeLower === "river") {
+        return {
+            category: "Grote Rivier",
+            depth: "2.0m - 8.0m (Kribben & Vaargeul)",
+            profile: "Kribvakken, stroomnaden, diepe uitgesleten kolken achter kribkoppen.",
+            tempSensitivity: "Gemiddeld (sterke invloed van bovenwater/stroming)",
+            oxygenLevel: "Zeer goed (continu zuurstofrijk door stroming)"
+        };
     }
 
     return {
-        temperature: current.temperature_2m,
-        windSpeed: current.wind_speed_10m,
-        pressure: current.surface_pressure,
-        pressureTrend
+        category: "Binnenwater",
+        depth: "1.0m - 3.5m",
+        profile: "Standaard binnenwater met geleidelijk aflopende oever/talud.",
+        tempSensitivity: "Gemiddeld",
+        oxygenLevel: "Normaal"
     };
 }
 
 /**
- * Haalt waterstructuren (bruggen en stuwen) op van Overpass API binnen de kaartgrenzen.
+ * Punt 3: Getijden & Estuarium-Indicatie (Zout / Brak Water)
  */
-export async function fetchWaterStructures(bounds) {
-    if (overpassAbortController) overpassAbortController.abort();
-    overpassAbortController = new AbortController();
+export function checkTidalZone(lat, lng) {
+    // Coördinatenkader voor Zeeland, Waddenzee, Rotterdam/Nieuwe Waterweg, Haringvliet, IJmuiden
+    const isCoastal = (lat > 51.3 && lat < 53.6 && lng > 3.3 && lng < 7.2);
+    const isWestCoast = lng < 4.8 || lat > 52.8;
 
-    const bbox = `${bounds.getSouth()},${bounds.getWest()},${bounds.getNorth()},${bounds.getEast()}`;
-    const query = `[out:json][timeout:10];
+    if (isCoastal && isWestCoast) {
+        return {
+            isTidal: true,
+            waterType: "Brak / Zout Estuarium",
+            tip: "Houd rekening met getijdewerking (Eb & Vloed). Stromend water activeert roofvis zoals Zeebaars en Bot!"
+        };
+    }
+    return {
+        isTidal: false,
+        waterType: "Zoet Water",
+        tip: ""
+    };
+}
+
+/**
+ * Haalt actuele weer- en historische temperatuurdata op via Open-Meteo
+ */
+export async function getWeatherData(lat, lng) {
+    try {
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,surface_pressure,wind_speed_10m,wind_direction_10m,weather_code&daily=temperature_2m_max,temperature_2m_min&timezone=auto`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error("Weer API fout");
+        const data = await res.json();
+        
+        return {
+            temp: data.current.temperature_2m,
+            pressure: data.current.surface_pressure,
+            windSpeed: data.current.wind_speed_10m,
+            windDir: data.current.wind_direction_10m,
+            weatherCode: data.current.weather_code,
+            dailyMax: data.daily.temperature_2m_max[0],
+            dailyMin: data.daily.temperature_2m_min[0]
+        };
+    } catch (err) {
+        console.error("Fout bij ophalen weerdata:", err);
+        return {
+            temp: 15,
+            pressure: 1013,
+            windSpeed: 10,
+            windDir: 180,
+            weatherCode: 0,
+            dailyMax: 18,
+            dailyMin: 10
+        };
+    }
+}
+
+/**
+ * Zoekt waterstructuren rondom gekozen coördinaten
+ */
+export async function fetchWaterNodes(lat, lng) {
+    const query = `[out:json][timeout:4];
         (
-          node["bridge"](${bbox});
-          way["bridge"](${bbox});
-          node["waterway"="weir"](${bbox});
+          way["natural"="water"](around:400,${lat},${lng});
+          way["waterway"](around:400,${lat},${lng});
+          way["bridge"](around:400,${lat},${lng});
+          node["waterway"](around:400,${lat},${lng});
         );
-        out center;`;
+        out center 15;`;
 
-    const response = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`, {
-        signal: overpassAbortController.signal
-    });
-    
-    if (!response.ok) throw new Error("Structuur-API niet bereikbaar");
-    return await response.json();
+    const url = "https://overpass-api.de/api/interpreter?data=" + encodeURIComponent(query);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3500);
+
+    try {
+        const response = await fetch(url, { signal: controller.signal });
+        clearTimeout(timeoutId);
+        if (!response.ok) throw new Error("Overpass API Fout");
+        const data = await response.json();
+        return data.elements || [];
+    } catch (e) {
+        clearTimeout(timeoutId);
+        return []; // Trigger fallback
+    }
 }
